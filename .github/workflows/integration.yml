@@ -1,0 +1,41 @@
+name: integration
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+  push:
+    branches: [main]
+
+jobs:
+  remote-ollama:
+    runs-on: ubuntu-latest
+    env:
+      OLLAMA_HOST: ${{ secrets.REMOTE_OLLAMA_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail fast if OLLAMA_HOST unset
+        run: |
+          if [ -z "$OLLAMA_HOST" ]; then echo "REMOTE_OLLAMA_HOST secret missing"; exit 1; fi
+      - name: Build + up
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+      - name: Wait for /health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health | grep -q '"ok": true'; then echo "healthy"; exit 0; fi
+            sleep 3
+          done
+          echo "not healthy"; docker compose logs --tail=200; exit 1
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - name: Install test deps
+        run: pip install -r requirements-dev.txt
+      - name: Integration tests
+        run: pytest -q -m integration
+      - name: Dump logs
+        if: failure()
+        run: docker compose logs --tail=300
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

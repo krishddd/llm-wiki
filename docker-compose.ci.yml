@@ -1,0 +1,11 @@
+services:
+  app:
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - MODEL_EMBED=${MODEL_EMBED:-nomic-embed-text:latest}
+      - MODEL_REASON=${MODEL_REASON:-qwen3:14b}
+      - MODEL_SUMMARY=${MODEL_SUMMARY:-gemma3:e4b}
+      - MODEL_FAST=${MODEL_FAST:-llama3.2:latest}
+      - MODEL_VISION=${MODEL_VISION:-llava:7b}
+    # no volume mounts in CI — ephemeral data dir inside the container
+    volumes: []

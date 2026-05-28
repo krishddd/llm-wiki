@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    image: llm-wiki-poc:latest
+    container_name: llm-wiki-app
+    env_file: .env
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./wiki:/app/wiki
+      - ./data:/app/data
+      - ./logs:/app/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

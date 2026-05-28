@@ -1,0 +1,52 @@
+## Multimodal & feature test queries
+
+### Tables
+1. What architectures are compared in the agent evaluation research, and what evaluation metric does each use?
+2. Show me the comparison table of testing approaches across these documents.
+3. What numbers or thresholds are reported for the 60% Performance Wall?
+4. Which tools are listed for counterfactual testing, and what are they used for?
+5. List every metric mentioned in the evaluation comparison tables.
+
+### Images / Figures
+6. What diagrams or charts illustrate the active-inference architecture?
+7. Are there any figures showing performance degradation with context length?
+8. What visuals describe the multi-agent simulation framework?
+
+### Code blocks
+9. What FastAPI endpoint patterns or code snippets are shown in the evaluation platform doc?
+10. Show me the canary deployment configuration code if any.
+11. What Python or YAML configuration examples appear across these documents?
+
+### Cross-document synthesis
+12. Compare the evaluation methodologies as a table — what does each document contribute?
+13. How do the Digital Twin and OASIS frameworks differ on the metrics they evaluate?
+14. Compare how the Active Inference paper and the LLM Context paper each explain the root cause of hallucinations.
+15. What evaluation techniques appear in both the FastAPI evaluation platform and the LangSmith/LLMOps research?
+
+### HyDE + decomposition
+16. Compare how Active Inference and Memory-as-Code each address LLM hallucination.
+17. What is Lost-in-the-Middle, and which frameworks mentioned across these documents attempt to mitigate it?
+18. Explain counterfactual testing, name two tools that support it, and describe how CI/CD integration would look.
+19. What does Memory-as-Code mean, and how does it relate to Zep knowledge graphs and Titans?
+
+### Single-doc factual
+20. What is the Free Energy Principle and how does Active Inference apply it to LLMs?
+21. What is the 60% Performance Wall in large-context LLMs?
+22. What is a Process Digital Twin and why is it used for agent testing?
+23. How can an AI agent recognize its own knowledge limits before taking an irreversible action?
+24. Why do short benchmark scores overstate real-world agent reliability?
+
+### Entity-graph traversal
+25. What tools are associated with LangChain in the context of enterprise agent evaluation?
+26. Which papers mention GPT-4 and in what failure context?
+27. How are Arctic Wolf, SOCs, and agent evaluation connected?
+28. What concepts link Zep, MBTI personas, and OASIS?
+
+### Save-back trigger
+29. Give a comprehensive overview of what makes agent evaluation different from traditional software testing.
+30. Summarize the full landscape of approaches to LLM hallucination mitigation discussed across these documents.
+
+### Out-of-corpus (negative)
+31. What did Sam Altman say about GPT-6 release dates?
+32. What are the latest home loan interest rates in Indian banks?
+33. Who won the 2024 Cricket World Cup?

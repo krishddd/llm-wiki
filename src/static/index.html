@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM-Wiki Modernization Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Vis.js Network Standalone -->
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <!-- Premium CSS Styles -->
+    <style>
+        :root {
+            --bg-base: #030712;
+            --bg-sidebar: #0b0f19;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --bg-card-hover: rgba(31, 41, 55, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --primary-hover: #4f46e5;
+            --secondary: #7c3aed;
+            --secondary-glow: rgba(124, 58, 237, 0.3);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.2);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.2);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --font-display: 'Outfit', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(124, 58, 237, 0.1) 0px, transparent 50%);
+        }
+
+        /* Sidebar navigation styling */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px 16px;
+            z-index: 10;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding-left: 8px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.2rem;
+            box-shadow: 0 0 16px var(--primary-glow);
+        }
+
+        .logo-text {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.3rem;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #ffffff, #d1d5db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-version {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            margin-left: auto;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            color: var(--text-main);
+            background-color: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-item.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(124, 58, 237, 0.05));
+            border-color: rgba(99, 102, 241, 0.25);
+            box-shadow: inset 0 0 12px rgba(99, 102, 241, 0.05);
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            transition: var(--transition);
+        }
+
+        .nav-item.active svg {
+            stroke: var(--primary);
+            filter: drop-shadow(0 0 4px var(--primary));
+        }
+
+        /* Health check indicator */
+        .system-health {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 0.85rem;
+        }
+
+        .health-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .health-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .health-dot.checking {
+            background-color: var(--warning);
+            box-shadow: 0 0 8px var(--warning);
+            animation: pulse 1.5s infinite;
+        }
+
+        .health-dot.down {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        .health-label {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .health-info {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        /* Main Workspace Panel */
+        .workspace {
+            flex-grow: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .workspace-header {
+            height: 70px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: rgba(3, 7, 18, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 5;
+        }
+
+        .workspace-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.4rem;
+        }
+
+        .workspace-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Tab Content Panel styling */
+        .tab-panel {
+            flex-grow: 1;
+            display: none;
+            height: calc(100vh - 70px);
+            overflow: hidden;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background-color: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            transition: var(--transition);
+        }
+
+        /* Premium buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 550;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+            font-family: var(--font-sans);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px var(--primary-glow);
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Playground Tab Layout (NotebookLM Style) */
+        .playground-container {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .chat-section {
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 24px;
+            background-color: rgba(3, 7, 18, 0.2);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-right: 8px;
+            margin-bottom: 20px;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 16px;
+            max-width: 85%;
+        }
+
+        .chat-message.assistant {
+            align-self: flex-start;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .avatar.assistant {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .avatar.user {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+        }
+
+        .message-box {
+            padding: 16px 20px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-message.assistant .message-box {
+            background-color: rgba(17, 24, 39, 0.4);
+            border-top-left-radius: 4px;
+        }
+
+        .chat-message.user .message-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(124, 58, 237, 0.08));
+            border-color: rgba(99, 102, 241, 0.25);
+            border-top-right-radius: 4px;
+        }
+
+        .message-box p {
+            margin-bottom: 12px;
+        }
+        .message-box p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-box ul, .message-box ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .message-box li {
+            margin-bottom: 6px;
+        }
+
+        /* Citation Tag styling */
+        .cite-tag {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(124, 58, 237, 0.2));
+            color: #c7d2fe;
+            border: 1px solid rgba(165, 180, 252, 0.3);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 2px;
+            transition: var(--transition);
+        }
+
+        .cite-tag:hover {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        /* GFM Pipeline Table in Markdown */
+        .md-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.88rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .md-table th {
+            background-color: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            text-align: left;
+            padding: 10px 14px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .md-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .md-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* LaTeX math styles */
+        .math-block {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            text-align: center;
+            margin: 14px 0;
+            color: #a5b4fc;
+        }
+
+        /* Callout blocks */
+        .callout {
+            border-left: 4px solid var(--primary);
+            background-color: rgba(99, 102, 241, 0.03);
+            border-radius: 4px 8px 8px 4px;
+            padding: 12px 16px;
+            margin: 16px 0;
+        }
+
+        .callout.warning {
+            border-left-color: var(--warning);
+            background-color: rgba(245, 158, 11, 0.02);
+        }
+
+        .callout.tip {
+            border-left-color: var(--success);
+            background-color: rgba(16, 185, 129, 0.02);
+        }
+
+        .callout-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Chat input section */
+        .chat-input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .chat-textarea {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            resize: none;
+            height: 44px;
+            max-height: 120px;
+            padding: 10px 4px;
+            outline: none;
+            line-height: 1.4;
+        }
+
+        /* Source Preview Section (Right Column) */
+        .sources-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            padding: 24px;
+            background-color: rgba(3, 7, 18, 0.4);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+        }
+
+        .source-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            background-color: rgba(255,255,255,0.01);
+            margin-bottom: 16px;
+            transition: var(--transition);
+        }
+
+        .source-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            background-color: rgba(255,255,255,0.02);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .source-card.highlighted {
+            border-color: var(--primary);
+            background-color: rgba(99, 102, 241, 0.05);
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.15);
+            transform: scale(1.01);
+        }
+
+        .source-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+
+        .source-badge {
+            background-color: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        .source-badge.live {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        .source-confidence {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .source-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.98rem;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .source-snippet {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            background-color: rgba(0, 0, 0, 0.15);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px dashed var(--border-color);
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .source-excerpts-container {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .excerpt-pill {
+            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            color: var(--text-muted);
+        }
+
+        .excerpt-pill svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.5;
+            flex-shrink: 0;
+        }
+
+        /* 3D Knowledge Graph Panel */
+        .graph-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 280px;
+        }
+
+        .graph-viewport {
+            width: 100%;
+            height: 100%;
+            background-color: #020617;
+        }
+
+        .graph-sidebar {
+            border-left: 1px solid var(--border-color);
+            background-color: rgba(11, 15, 25, 0.8);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .graph-filter-section {
+            margin-bottom: 24px;
+        }
+
+        .filter-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+
+        .checkbox-container input {
+            cursor: pointer;
+        }
+
+        .entity-card-detail {
+            border: 1px solid var(--border-color);
+            background-color: rgba(255,255,255,0.01);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .detail-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+        }
+
+        /* Contradiction Center Panel */
+        .contradiction-container {
+            padding: 32px;
+            height: 100%;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .contradictions-list-column {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .contradiction-item {
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.03), rgba(3, 7, 18, 0.4));
+            border-radius: 12px;
+            padding: 18px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .contradiction-item:hover {
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
+        }
+
+        .contradiction-item.active {
+            border-color: var(--danger);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(3, 7, 18, 0.6));
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
+        }
+
+        .contradiction-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+        }
+
+        .contra-badge {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--danger);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .contra-subject {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+
+        .contra-pred {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            margin-bottom: 12px;
+        }
+
+        .contra-objects {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+
+        .contra-obj-card {
+            background-color: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 50px;
+        }
+
+        .resolver-workspace {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 0;
+            display: none; /* Show only when active */
+        }
+
+        .workspace-card-header {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 8px;
+        }
+
+        .workspace-comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .comp-card {
+            border: 1px solid var(--border-color);
+            background-color: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comp-card.winner-candidate {
+            border-color: rgba(16, 185, 129, 0.4);
+            background-color: rgba(16, 185, 129, 0.02);
+        }
+
+        .comp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .comp-score {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .comp-body {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-main);
+            flex-grow: 1;
+        }
+
+        .comp-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        /* Ingest & Upkeep Admin tab styling */
+        .admin-container {
+            padding: 32px;
+            height: 100%;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 32px;
+        }
+
+        .admin-controls-column {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .admin-group-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .upload-dropzone {
+            border: 2px dashed rgba(99, 102, 241, 0.3);
+            background-color: rgba(99, 102, 241, 0.02);
+            border-radius: 16px;
+            padding: 36px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .upload-dropzone:hover {
+            border-color: var(--primary);
+            background-color: rgba(99, 102, 241, 0.05);
+        }
+
+        .dropzone-icon {
+            width: 48px;
+            height: 48px;
+            stroke: var(--primary);
+            fill: none;
+            stroke-width: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .dropzone-text {
+            font-weight: 550;
+            font-size: 0.98rem;
+            margin-bottom: 4px;
+        }
+
+        .dropzone-subtext {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .file-list-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .file-item-card {
+            background-color: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .file-item-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remove-file-btn {
+            color: var(--danger);
+            cursor: pointer;
+            font-weight: bold;
+            padding: 2px 6px;
+        }
+
+        .job-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .job-card {
+            border: 1px solid var(--border-color);
+            background-color: rgba(255,255,255,0.01);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .job-card:hover {
+            border-color: rgba(255,255,255,0.15);
+            background-color: rgba(255,255,255,0.02);
+        }
+
+        .job-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .job-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.98rem;
+            color: var(--text-main);
+        }
+
+        .job-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .job-schedule {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-family: var(--font-mono);
+        }
+
+        /* Console Output terminal panel */
+        .terminal-column {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .terminal-panel {
+            background-color: #010409;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .terminal-header {
+            background-color: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .terminal-controls {
+            display: flex;
+            gap: 6px;
+        }
+
+        .term-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .term-dot.red { background-color: var(--danger); }
+        .term-dot.yellow { background-color: var(--warning); }
+        .term-dot.green { background-color: var(--success); }
+
+        .terminal-body {
+            flex-grow: 1;
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #38bdf8;
+            overflow-y: auto;
+            line-height: 1.5;
+            background-image: linear-gradient(rgba(1, 4, 9, 0.95), rgba(1, 4, 9, 0.95)), radial-gradient(circle, rgba(14, 165, 233, 0.05) 0%, transparent 100%);
+        }
+
+        .terminal-line {
+            margin-bottom: 8px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .terminal-line.cmd {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .terminal-line.cmd::before {
+            content: "$ ";
+            color: var(--primary);
+        }
+
+        .terminal-line.success-log {
+            color: var(--success);
+        }
+        .terminal-line.error-log {
+            color: var(--danger);
+        }
+
+        /* Modal popup dialogs */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(2, 6, 17, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 500px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Scrollbar aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <div class="sidebar">
+        <div>
+            <div class="logo-container">
+                <div class="logo-icon">Ω</div>
+                <div class="logo-text">LLM-Wiki</div>
+                <div class="logo-version">v2.0</div>
+            </div>
+            
+            <ul class="nav-list">
+                <li class="nav-item active" data-tab="playground">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    Q&A Playground
+                </li>
+                <li class="nav-item" data-tab="graph" id="nav-graph-btn">
+                    <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                    Knowledge Graph
+                </li>
+                <li class="nav-item" data-tab="contradictions" id="nav-contra-btn">
+                    <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Contradiction Center
+                </li>
+                <li class="nav-item" data-tab="admin">
+                    <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                    Upkeep & Admin
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Health Status Block -->
+        <div class="system-health">
+            <div class="health-row">
+                <div class="health-dot checking" id="health-dot"></div>
+                <div class="health-label">Ollama Host</div>
+            </div>
+            <div class="health-info" id="health-info">Checking connectivity to Ollama...</div>
+        </div>
+    </div>
+
+    <!-- MAIN WORKSPACE -->
+    <div class="workspace">
+        <div class="workspace-header">
+            <div class="workspace-title" id="workspace-title">Structured Q&A Playground</div>
+            <div class="workspace-actions">
+                <div class="health-info" id="global-correlation-id" style="font-family: var(--font-mono); font-size: 0.75rem;">CID: none</div>
+            </div>
+        </div>
+
+        <!-- 1. Q&A PLAYGROUND TAB -->
+        <div class="tab-panel active" id="panel-playground">
+            <div class="playground-container">
+                <!-- Chat Window -->
+                <div class="chat-section">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Bot Message -->
+                        <div class="chat-message assistant">
+                            <div class="avatar assistant">AI</div>
+                            <div class="message-box">
+                                <p>Welcome to the modernized <strong>LLM-Wiki PoC NotebookLM workspace</strong>! I can synthesize compound answers, analyze contradictions, and map bi-temporal fact histories.</p>
+                                <p>Ask me a research question, and I will search the lexical indexes, dense vector spaces, and knowledge graph structure to output a grounded synthesis with citations.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chat Input widget -->
+                    <div class="chat-input-container">
+                        <textarea class="chat-textarea" id="chat-input" placeholder="Ask LLM-Wiki a compound research question... (Shift+Enter for new line)"></textarea>
+                        <button class="btn btn-primary" id="chat-submit-btn" style="padding: 10px 14px; border-radius: 12px; flex-shrink: 0; width: 44px; height: 44px;">
+                            <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: white; fill: none; stroke-width: 2.5;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sources Sidebar -->
+                <div class="sources-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--primary); fill: none; stroke-width: 2.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            Retrieved Sources
+                        </div>
+                        <div class="health-info" id="sources-count">0 pages loaded</div>
+                    </div>
+                    <div id="sources-list-container">
+                        <div class="health-info" style="text-align: center; margin-top: 40px; padding: 0 20px;">
+                            No sources retrieved yet. Enter a question to query the hybrid search pipeline.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. KNOWLEDGE GRAPH TAB -->
+        <div class="tab-panel" id="panel-graph">
+            <div class="graph-container">
+                <!-- Vis Network Viewport -->
+                <div class="graph-viewport" id="graph-viewport"></div>
+                
+                <!-- Controls sidebar -->
+                <div class="graph-sidebar">
+                    <div class="graph-filter-section">
+                        <span class="filter-label">Legend & Nodes</span>
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;"><div style="width: 14px; height: 14px; border-radius: 4px; background: #6366f1;"></div> Concept</div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;"><div style="width: 14px; height: 14px; border-radius: 4px; background: #10b981;"></div> Person</div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;"><div style="width: 14px; height: 14px; border-radius: 4px; background: #7c3aed;"></div> Organization</div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;"><div style="width: 14px; height: 14px; border-radius: 4px; background: #f59e0b;"></div> Place</div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;"><div style="width: 14px; height: 14px; border-radius: 4px; background: #ef4444;"></div> Event</div>
+                        </div>
+                        
+                        <span class="filter-label">Fact Status Filter</span>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="filter-active" checked>
+                            Show Active Facts
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="filter-superseded" checked>
+                            Show Superseded Facts
+                        </label>
+                    </div>
+
+                    <button class="btn btn-secondary" id="refresh-graph-btn" style="width: 100%; margin-bottom: 20px;">Refresh Network</button>
+                    
+                    <div class="entity-card-detail" id="entity-detail-card">
+                        <div class="detail-title" id="entity-detail-name">Entity</div>
+                        <div class="source-badge" id="entity-detail-type" style="margin-bottom: 12px; display: inline-block;">CONCEPT</div>
+                        <div class="health-info" style="margin-bottom: 10px;"><strong>Backlinks:</strong> <span id="entity-backlinks-count">0</span> pages</div>
+                        
+                        <span class="filter-label" style="font-size: 0.72rem; margin-top: 14px;">Known Fact Assertions</span>
+                        <div id="entity-facts-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. CONTRADICTION CENTER TAB -->
+        <div class="tab-panel" id="panel-contradictions">
+            <div class="contradiction-container">
+                <!-- Left: Contradiction Lists -->
+                <div>
+                    <div class="section-header" style="margin-bottom: 24px;">
+                        <div class="section-title">Unresolved Contradictions</div>
+                        <div class="source-badge" id="contra-count-badge">0 Open</div>
+                    </div>
+                    
+                    <div class="contradictions-list-column" id="contradictions-list">
+                        <!-- Dynamic items will load here -->
+                    </div>
+                </div>
+
+                <!-- Right: Resolver Workspace -->
+                <div class="glass-card resolver-workspace" id="resolver-workspace">
+                    <div>
+                        <div class="workspace-card-header">Resolve Claim Conflict</div>
+                        <div class="health-info" id="workspace-claim-predicate">Subject → Predicate</div>
+                    </div>
+                    
+                    <div class="workspace-comparison-grid">
+                        <!-- Fact A Card -->
+                        <div class="comp-card" id="contra-card-a">
+                            <div class="comp-header">
+                                <span class="source-badge">FACT A</span>
+                                <span class="comp-score" id="contra-score-a">0.00</span>
+                            </div>
+                            <div class="comp-body" id="contra-body-a">Claim text</div>
+                            <div>
+                                <div class="comp-label">Source page</div>
+                                <div class="health-info" id="contra-source-a" style="font-weight: 600;">page_id</div>
+                            </div>
+                            <div>
+                                <div class="comp-label">Stored Conf / Ingested Date</div>
+                                <div class="health-info" id="contra-meta-a">0.00 / 2026-05-01</div>
+                            </div>
+                            <button class="btn btn-primary" id="btn-force-a" style="background-color: var(--success); box-shadow: 0 4px 10px var(--success-glow); width: 100%;">Keep This Claim</button>
+                        </div>
+
+                        <!-- Fact B Card -->
+                        <div class="comp-card" id="contra-card-b">
+                            <div class="comp-header">
+                                <span class="source-badge">FACT B</span>
+                                <span class="comp-score" id="contra-score-b">0.00</span>
+                            </div>
+                            <div class="comp-body" id="contra-body-b">Claim text</div>
+                            <div>
+                                <div class="comp-label">Source page</div>
+                                <div class="health-info" id="contra-source-b" style="font-weight: 600;">page_id</div>
+                            </div>
+                            <div>
+                                <div class="comp-label">Stored Conf / Ingested Date</div>
+                                <div class="health-info" id="contra-meta-b">0.00 / 2026-05-01</div>
+                            </div>
+                            <button class="btn btn-primary" id="btn-force-b" style="background-color: var(--success); box-shadow: 0 4px 10px var(--success-glow); width: 100%;">Keep This Claim</button>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 10px;">
+                        <button class="btn btn-secondary" id="btn-auto-resolve" style="width: 100%;">Re-Evaluate Composite Scoring</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. UPKEEP & ADMIN TAB -->
+        <div class="tab-panel" id="panel-admin">
+            <div class="admin-container">
+                <!-- Controls Column -->
+                <div class="admin-controls-column">
+                    
+                    <!-- Document Ingest Section -->
+                    <div>
+                        <span class="admin-group-title">
+                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--primary); fill: none; stroke-width: 2.5;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            Multi-Format Document Ingestion
+                        </span>
+                        
+                        <div class="upload-dropzone" id="upload-dropzone">
+                            <svg class="dropzone-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <div class="dropzone-text">Drag & drop files to ingest</div>
+                            <div class="dropzone-subtext">Supports PDF, DOCX, HTML, PPTX, XLSX, CSV, MD, TXT</div>
+                            <input type="file" id="file-input" multiple style="display: none;">
+                        </div>
+
+                        <div class="file-list-preview" id="file-list-preview"></div>
+                        <button class="btn btn-primary" id="ingest-submit-btn" style="width: 100%; margin-top: 14px; display: none;">Submit Files for Ingestion</button>
+                    </div>
+
+                    <!-- Scheduler Maintenance Jobs -->
+                    <div>
+                        <span class="admin-group-title">
+                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--primary); fill: none; stroke-width: 2.5;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            Upkeep & Maintenance Jobs
+                        </span>
+                        
+                        <div class="job-grid">
+                            <!-- Decay Sweep -->
+                            <div class="job-card">
+                                <div class="job-header">
+                                    <span class="job-title">Ebbinghaus Decay Sweep</span>
+                                    <span class="job-schedule">Daily 03:00</span>
+                                </div>
+                                <div class="job-desc">Calculates effective confidence decay on claims based on access reinforcement history.</div>
+                                <button class="btn btn-secondary btn-run-job" data-job="decay_sweep">Run Sweep</button>
+                            </div>
+
+                            <!-- Episodic Prune -->
+                            <div class="job-card">
+                                <div class="job-header">
+                                    <span class="job-title">Episodic Memory Pruning</span>
+                                    <span class="job-schedule">Daily 03:30</span>
+                                </div>
+                                <div class="job-desc">Deletes transient query, ingest, and system events older than the 14-day config limit.</div>
+                                <button class="btn btn-secondary btn-run-job" data-job="episodic_prune">Run Prune</button>
+                            </div>
+
+                            <!-- Promote Episodic -->
+                            <div class="job-card">
+                                <div class="job-header">
+                                    <span class="job-title">Episodic Promotion</span>
+                                    <span class="job-schedule">Daily 04:00</span>
+                                </div>
+                                <div class="job-desc">Clusters recurring search themes in logs and synthesizes into semantic wiki source pages.</div>
+                                <button class="btn btn-secondary btn-run-job" data-job="promote_episodic">Run Promotion</button>
+                            </div>
+
+                            <!-- Detect Procedures -->
+                            <div class="job-card">
+                                <div class="job-header">
+                                    <span class="job-title">Procedure Extraction</span>
+                                    <span class="job-schedule">Sun 06:00</span>
+                                </div>
+                                <div class="job-desc">Analyzes recurring queries with static page recall and crystallizes them into procedures.</div>
+                                <button class="btn btn-secondary btn-run-job" data-job="detect_procedures">Extract Procedures</button>
+                            </div>
+
+                            <!-- Lint AutoFix -->
+                            <div class="job-card" style="grid-column: span 2;">
+                                <div class="job-header">
+                                    <span class="job-title">Wiki Lint & Auto-Repair</span>
+                                    <span class="job-schedule">Sun 05:00</span>
+                                </div>
+                                <div class="job-desc">Scans page indices, heals back-links, archives stale records, and isolates unresolved cross-references.</div>
+                                <button class="btn btn-secondary btn-run-job" data-job="lint_autofix">Run Lint Repair</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Log Console -->
+                <div class="terminal-column">
+                    <div class="section-header" style="margin-bottom: 20px;">
+                        <div class="section-title">Upkeep Output Terminal</div>
+                        <button class="btn btn-secondary" id="clear-terminal-btn" style="padding: 6px 12px; font-size: 0.8rem;">Clear Output</button>
+                    </div>
+                    
+                    <div class="terminal-panel">
+                        <div class="terminal-header">
+                            <span>admin_upkeep@llm_wiki:~</span>
+                            <div class="terminal-controls">
+                                <div class="term-dot red"></div>
+                                <div class="term-dot yellow"></div>
+                                <div class="term-dot green"></div>
+                            </div>
+                        </div>
+                        <div class="terminal-body" id="terminal-body">
+                            <div class="terminal-line success-log">Initializing secure console link to LLM-Wiki API...</div>
+                            <div class="terminal-line success-log">Connection established. Terminal listening for execution payloads.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal dialogue for Ingestion Progress -->
+    <div class="modal" id="ingest-modal">
+        <div class="glass-card modal-card">
+            <div style="text-align: center;">
+                <div class="logo-icon" style="margin: 0 auto 16px; width: 44px; height: 44px; font-size: 1.5rem;">Ω</div>
+                <div class="workspace-card-header" id="ingest-modal-title">Ingesting Documents...</div>
+                <div class="health-info" id="ingest-modal-status" style="margin-top: 6px;">Processing layouts and summarizing chunks.</div>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: 0.8rem; max-height: 180px; overflow-y: auto;" id="ingest-modal-details">
+                Files queued...
+            </div>
+            
+            <button class="btn btn-secondary" id="close-ingest-modal-btn" style="display: none; width: 100%;">Close Panel</button>
+        </div>
+    </div>
+
+    <!-- Premium JavaScript Application Logic -->
+    <script>
+        const API_URL = ''; // Serve relative to FastAPI server
+
+        // Elements
+        const navItems = document.querySelectorAll('.sidebar .nav-list .nav-item');
+        const tabPanels = document.querySelectorAll('.workspace .tab-panel');
+        const workspaceTitle = document.getElementById('workspace-title');
+        const healthDot = document.getElementById('health-dot');
+        const healthInfo = document.getElementById('health-info');
+        const globalCorrelationId = document.getElementById('global-correlation-id');
+
+        // Navigation state routing
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const targetTab = item.getAttribute('data-tab');
+                
+                navItems.forEach(nav => nav.classList.remove('active'));
+                tabPanels.forEach(panel => panel.classList.remove('active'));
+                
+                item.classList.add('active');
+                const targetPanel = document.getElementById(`panel-${targetTab}`);
+                if (targetPanel) targetPanel.classList.add('active');
+                
+                // Update header title
+                let title = 'Playground';
+                if (targetTab === 'playground') title = 'Structured Q&A Playground';
+                if (targetTab === 'graph') {
+                    title = 'Bi-Temporal Knowledge Graph';
+                    loadGraphData();
+                }
+                if (targetTab === 'contradictions') {
+                    title = 'Claim Contradiction Center';
+                    loadContradictions();
+                }
+                if (targetTab === 'admin') title = 'System Maintenance & Ingest Admin';
+                
+                workspaceTitle.textContent = title;
+            });
+        });
+
+        // Fetch API Health on load
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_URL}/health`);
+                if (res.ok) {
+                    const data = await res.json();
+                    healthDot.className = 'health-dot';
+                    healthInfo.textContent = `Connected! Models: Qwen, Gemma, Nomic. Ready.`;
+                    if (data.correlation_id) {
+                        globalCorrelationId.textContent = `CID: ${data.correlation_id.substring(0, 12)}...`;
+                    }
+                } else {
+                    throw new Error('API server healthy, health check returned invalid status');
+                }
+            } catch (err) {
+                healthDot.className = 'health-dot down';
+                healthInfo.textContent = 'API Host offline. Verify Uvicorn is running on port 8000.';
+            }
+        }
+        checkHealth();
+        setInterval(checkHealth, 15000);
+
+        // ───── 1. Q&A Chat Playground ─────
+        const chatInput = document.getElementById('chat-input');
+        const chatSubmitBtn = document.getElementById('chat-submit-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const sourcesListContainer = document.getElementById('sources-list-container');
+        const sourcesCount = document.getElementById('sources-count');
+
+        // Textarea auto-resize
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight - 4) + 'px';
+        });
+
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitChatQuery();
+            }
+        });
+
+        chatSubmitBtn.addEventListener('click', submitChatQuery);
+
+        // Render citations [Page Title] as custom HTML interactive pills
+        function parseFormatting(text, citations) {
+            // Escape html tags to avoid injections
+            let clean = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            
+            // Format bold **text**
+            clean = clean.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Format inline code `code`
+            clean = clean.replace(/`(.*?)`/g, '<code style="background: rgba(255,255,255,0.06); padding: 2px 4px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.88em;">$1</code>');
+
+            // Format Callout warnings/tips/notes
+            clean = clean.replace(/&gt;\s*\[!(NOTE|TIP|WARNING)\](.*?)(?=\n|$)/gi, (match, type, content) => {
+                const ctype = type.toLowerCase();
+                return `<div class="callout ${ctype}"><div class="callout-title">${type}</div>`;
+            });
+
+            // Map citation order from API citations
+            const citationMap = {};
+            citations.forEach((c, idx) => {
+                citationMap[c.title.toLowerCase().trim()] = idx + 1;
+            });
+
+            // Replace brackets [Citation Title] with interactive cite tag linked to sidebar indices
+            clean = clean.replace(/\[([^\]]+)\](?!\()/g, (match, title) => {
+                const cleanTitle = title.trim().toLowerCase();
+                const num = citationMap[cleanTitle];
+                if (num) {
+                    return `<span class="cite-tag" data-source-idx="${num - 1}">[${num}]</span>`;
+                }
+                return match;
+            });
+            
+            return clean;
+        }
+
+        async function submitChatQuery() {
+            const question = chatInput.value.trim();
+            if (!question) return;
+
+            // Append user chat bubble
+            appendMessage('user', question);
+            chatInput.value = '';
+            chatInput.style.height = '44px';
+
+            // Append assistant loading placeholder
+            const placeholderId = appendMessage('assistant', '<div class="health-info" style="display: flex; align-items: center; gap: 8px;"><div class="health-dot checking"></div> RAG is querying indexes and routing intents...</div>');
+
+            try {
+                const res = await fetch(`${API_URL}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question, top_k: 5 })
+                });
+
+                if (!res.ok) throw new Error(`Query failed: ${res.statusText}`);
+                
+                const data = await res.json();
+                
+                // Format the text and replace the loading bubble
+                const formattedAnswer = parseFormatting(data.answer, data.citations);
+                updateMessage(placeholderId, formattedAnswer);
+
+                // Update retrieved sources side pane
+                updateSourcesPanel(data.citations);
+                
+                if (data.correlation_id) {
+                    globalCorrelationId.textContent = `CID: ${data.correlation_id.substring(0, 12)}...`;
+                }
+            } catch (err) {
+                updateMessage(placeholderId, `<span style="color: var(--danger)"><strong>Synthesis Error:</strong> ${err.message}. Verify that Ollama model servers are warm.</span>`);
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const id = 'msg-' + Date.now();
+            const bubble = document.createElement('div');
+            bubble.className = `chat-message ${sender}`;
+            bubble.id = id;
+            bubble.innerHTML = `
+                <div class="avatar ${sender}">${sender === 'assistant' ? 'AI' : 'U'}</div>
+                <div class="message-box">${text}</div>
+            `;
+            chatMessages.appendChild(bubble);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Wire click event listeners on interactive cite tags inside bubble
+            bubble.querySelectorAll('.cite-tag').forEach(tag => {
+                tag.addEventListener('click', () => {
+                    const idx = tag.getAttribute('data-source-idx');
+                    highlightSourceCard(idx);
+                });
+            });
+
+            return id;
+        }
+
+        function updateMessage(id, newText) {
+            const msgEl = document.getElementById(id);
+            if (msgEl) {
+                const box = msgEl.querySelector('.message-box');
+                box.innerHTML = newText;
+                
+                // Re-bind listeners inside updated block
+                box.querySelectorAll('.cite-tag').forEach(tag => {
+                    tag.addEventListener('click', () => {
+                        const idx = tag.getAttribute('data-source-idx');
+                        highlightSourceCard(idx);
+                    });
+                });
+                
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function updateSourcesPanel(citations) {
+            sourcesListContainer.innerHTML = '';
+            
+            if (!citations || citations.length === 0) {
+                sourcesCount.textContent = '0 pages loaded';
+                sourcesListContainer.innerHTML = `<div class="health-info" style="text-align: center; margin-top: 40px;">No source documents matched the query.</div>`;
+                return;
+            }
+
+            sourcesCount.textContent = `${citations.length} pages loaded`;
+
+            citations.forEach((c, idx) => {
+                const card = document.createElement('div');
+                card.className = 'source-card';
+                card.id = `source-card-${idx}`;
+                
+                let excerptsHtml = '';
+                if (c.excerpts && c.excerpts.length > 0) {
+                    excerptsHtml = `<div class="source-excerpts-container">`;
+                    c.excerpts.forEach(e => {
+                        excerptsHtml += `
+                            <div class="excerpt-pill">
+                                <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                <strong>[Preserved ${e.kind.toUpperCase()}]</strong>
+                            </div>
+                        `;
+                    });
+                    excerptsHtml += `</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="source-meta">
+                        <span class="source-badge">[${idx + 1}] ${c.page.substring(0, 18)}</span>
+                        <span class="source-confidence">Conf: ${(c.confidence || 0.85).toFixed(2)}</span>
+                    </div>
+                    <div class="source-title">${c.title}</div>
+                    <div class="source-snippet">${c.snippet}</div>
+                    ${excerptsHtml}
+                `;
+                sourcesListContainer.appendChild(card);
+            });
+        }
+
+        function highlightSourceCard(idx) {
+            // Remove previous highlights
+            document.querySelectorAll('.source-card').forEach(c => c.classList.remove('highlighted'));
+            
+            const targetCard = document.getElementById(`source-card-${idx}`);
+            if (targetCard) {
+                targetCard.classList.add('highlighted');
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+
+        // ───── 2. Knowledge Graph Visualization (Vis.js) ─────
+        let networkInstance = null;
+
+        async function loadGraphData() {
+            const view = document.getElementById('graph-viewport');
+            view.innerHTML = '<div class="health-info" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);"><div class="health-dot checking" style="display:inline-block; margin-right:8px;"></div> Fetching bi-temporal graph facts...</div>';
+            
+            try {
+                // Fetch top entities
+                const res = await fetch(`${API_URL}/entities?limit=60`);
+                if (!res.ok) throw new Error('Failed to load canonical entity indices.');
+                
+                const data = await res.json();
+                
+                const nodes = [];
+                const edges = [];
+                
+                // Dynamic colors matching node types
+                const nodeColors = {
+                    'CONCEPT': '#6366f1',
+                    'PERSON': '#10b981',
+                    'ORG': '#7c3aed',
+                    'PLACE': '#f59e0b',
+                    'EVENT': '#ef4444'
+                };
+
+                if (!data.items || data.items.length === 0) {
+                    view.innerHTML = '<div class="health-info" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No nodes present in KnowledgeGraph SQLite index. Ingest a document first!</div>';
+                    return;
+                }
+
+                // Push entity nodes
+                data.items.forEach(item => {
+                    nodes.push({
+                        id: item.id,
+                        label: item.name,
+                        color: {
+                            background: nodeColors[item.type] || '#6b7280',
+                            border: '#1f2937',
+                            highlight: '#ffffff'
+                        },
+                        font: { color: '#ffffff', face: 'Inter', size: 12 },
+                        shape: 'dot',
+                        size: 15 + Math.min(item.backlinks * 2, 20),
+                        title: `Type: ${item.type} | Backlinks: ${item.backlinks}`,
+                        type: item.type
+                    });
+                });
+
+                // Fetch top relations to connect edges
+                // In a simplified client visualization, we can pull relations dynamically for top nodes
+                // To keep performance high, we query relations for top canonical nodes
+                const topNodeIds = data.items.slice(0, 15).map(i => i.id);
+                
+                for (let nid of topNodeIds) {
+                    try {
+                        const detailRes = await fetch(`${API_URL}/entities/${nid}`);
+                        if (detailRes.ok) {
+                            const details = await detailRes.json();
+                            
+                            (details.relations || []).forEach(r => {
+                                // Match destination entity in our node list
+                                const targetNode = data.items.find(item => item.name.toLowerCase() === r.name.toLowerCase());
+                                if (targetNode) {
+                                    // Avoid duplicate edge rendering
+                                    const exists = edges.some(e => 
+                                        (e.from === nid && e.to === targetNode.id) || 
+                                        (e.from === targetNode.id && e.to === nid)
+                                    );
+                                    
+                                    if (!exists) {
+                                        edges.push({
+                                            from: nid,
+                                            to: targetNode.id,
+                                            label: r.rel_type.toLowerCase().replace('_', ' '),
+                                            font: { color: '#9ca3af', face: 'Inter', size: 9, align: 'top' },
+                                            color: { color: 'rgba(255,255,255,0.12)', highlight: '#6366f1' },
+                                            width: 1
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        // ignore node fetch errors
+                    }
+                }
+
+                // Render Network Graph
+                view.innerHTML = '';
+                const graphData = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+                
+                const options = {
+                    physics: {
+                        stabilization: true,
+                        barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 95 }
+                    },
+                    interaction: { hover: true, tooltipDelay: 200 }
+                };
+
+                networkInstance = new vis.Network(view, graphData, options);
+
+                // Attach click event for sidebar inspector
+                networkInstance.on('click', function(properties) {
+                    const ids = properties.nodes;
+                    if (ids && ids.length > 0) {
+                        showEntityDetails(ids[0]);
+                    }
+                });
+
+            } catch (err) {
+                view.innerHTML = `<div class="health-info" style="color:var(--danger); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">Failed to load graph network: ${err.message}</div>`;
+            }
+        }
+
+        async function showEntityDetails(entityId) {
+            const card = document.getElementById('entity-detail-card');
+            const nameEl = document.getElementById('entity-detail-name');
+            const typeEl = document.getElementById('entity-detail-type');
+            const backlinksCount = document.getElementById('entity-backlinks-count');
+            const factsList = document.getElementById('entity-facts-list');
+            
+            try {
+                const res = await fetch(`${API_URL}/entities/${entityId}`);
+                if (!res.ok) throw new Error();
+                
+                const data = await res.json();
+                
+                nameEl.textContent = data.name;
+                typeEl.textContent = data.type;
+                backlinksCount.textContent = data.backlink_count;
+                
+                // Fetch bi-temporal facts for this entity
+                factsList.innerHTML = '<div class="health-info">Querying bi-temporal SQLite assertions...</div>';
+                
+                const factsRes = await fetch(`${API_URL}/facts/${encodeURIComponent(data.name)}?history=true`);
+                if (factsRes.ok) {
+                    const factsData = await factsRes.json();
+                    factsList.innerHTML = '';
+                    
+                    if (!factsData.items || factsData.items.length === 0) {
+                        factsList.innerHTML = '<div class="health-info">No bi-temporal claims extracted.</div>';
+                    } else {
+                        factsData.items.forEach(f => {
+                            const isSup = f.valid_to || f.superseded_by;
+                            const pill = document.createElement('div');
+                            pill.style.border = '1px solid ' + (isSup ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.2)');
+                            pill.style.background = isSup ? 'rgba(239, 68, 68, 0.02)' : 'rgba(16, 185, 129, 0.02)';
+                            pill.style.padding = '8px';
+                            pill.style.borderRadius = '6px';
+                            pill.style.fontSize = '0.78rem';
+                            
+                            pill.innerHTML = `
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                                    <span style="font-weight:700; color:${isSup ? 'var(--danger)' : 'var(--success)'};">
+                                        ${isSup ? '● SUPERSEDED' : '● ACTIVE'}
+                                    </span>
+                                    <span style="color:var(--text-muted); font-size:0.7rem;">Eff Conf: ${f.effective_confidence || f.confidence}</span>
+                                </div>
+                                <div style="font-family:var(--font-mono); margin-bottom:4px;">
+                                    ${f.predicate} <strong>${f.object}</strong>
+                                </div>
+                                <div style="color:var(--text-muted); font-size:0.7rem;">Source: ${f.source_page}</div>
+                            `;
+                            factsList.appendChild(pill);
+                        });
+                    }
+                }
+                
+                card.style.display = 'block';
+            } catch (e) {
+                card.style.display = 'none';
+            }
+        }
+
+        document.getElementById('refresh-graph-btn').addEventListener('click', loadGraphData);
+
+
+        // ───── 3. Claim Contradiction Center ─────
+        const contradictionsList = document.getElementById('contradictions-list');
+        const resolverWorkspace = document.getElementById('resolver-workspace');
+        const countBadge = document.getElementById('contra-count-badge');
+        
+        let activePair = null;
+
+        async function loadContradictions() {
+            contradictionsList.innerHTML = '<div class="health-info">Checking SQLite graph assertions for contradictions...</div>';
+            resolverWorkspace.style.display = 'none';
+            
+            try {
+                const res = await fetch(`${API_URL}/admin/contradictions`);
+                if (!res.ok) throw new Error();
+                
+                const data = await res.json();
+                contradictionsList.innerHTML = '';
+                
+                const count = data.count || 0;
+                countBadge.textContent = `${count} Open`;
+                
+                if (count === 0) {
+                    contradictionsList.innerHTML = '<div class="health-info" style="margin-top: 40px; text-align:center;">All clear! No active subject-predicate claim conflicts in knowledge graph.</div>';
+                    return;
+                }
+
+                data.items.forEach(pair => {
+                    const card = document.createElement('div');
+                    card.className = 'contradiction-item';
+                    
+                    card.innerHTML = `
+                        <div class="contradiction-meta">
+                            <span class="contra-badge">Conflict</span>
+                            <span class="health-info">Pair IDs: #${pair.fact_a} vs #${pair.fact_b}</span>
+                        </div>
+                        <div class="contra-subject" id="node-subj-${pair.fact_a}">Loading Entity Name...</div>
+                        <div class="contra-pred">Predicate: "${pair.predicate}"</div>
+                        <div class="contra-objects">
+                            <div class="contra-obj-card" style="border-left: 2px solid var(--danger);"><strong>A:</strong> ${pair.object_a}</div>
+                            <div class="contra-obj-card" style="border-left: 2px solid var(--primary);"><strong>B:</strong> ${pair.object_b}</div>
+                        </div>
+                    `;
+                    contradictionsList.appendChild(card);
+
+                    // Fetch subject name from entity id to display clean name
+                    fetch(`${API_URL}/entities`).then(r => r.json()).then(entitiesData => {
+                        const ent = entitiesData.items.find(e => e.id === pair.subject_id);
+                        if (ent) {
+                            card.querySelector('.contra-subject').textContent = ent.name;
+                        }
+                    });
+
+                    card.addEventListener('click', () => {
+                        // Mark active UI state
+                        document.querySelectorAll('.contradiction-item').forEach(c => c.classList.remove('active'));
+                        card.classList.add('active');
+                        
+                        openResolverWorkspace(pair);
+                    });
+                });
+            } catch (err) {
+                contradictionsList.innerHTML = '<div class="health-info" style="color:var(--danger);">Failed to query contradictions from API.</div>';
+            }
+        }
+
+        async function openResolverWorkspace(pair) {
+            activePair = pair;
+            
+            // Get clean subject name
+            let subjectName = `Entity ID: ${pair.subject_id}`;
+            try {
+                const entRes = await fetch(`${API_URL}/entities`);
+                const entData = await entRes.json();
+                const matched = entData.items.find(e => e.id === pair.subject_id);
+                if (matched) subjectName = matched.name;
+            } catch(e) {}
+
+            document.getElementById('workspace-claim-predicate').textContent = `Subject: "${subjectName}" ➔ Predicate: "${pair.predicate}"`;
+            
+            // Query fact objects in graph to get latest bi-temporal scores
+            const factsRes = await fetch(`${API_URL}/facts/${encodeURIComponent(subjectName)}?history=true`);
+            if (factsRes.ok) {
+                const factsData = await factsRes.json();
+                const factA = factsData.items.find(f => f.id === pair.fact_a);
+                const factB = factsData.items.find(f => f.id === pair.fact_b);
+                
+                if (factA && factB) {
+                    // Populate Fact A Card details
+                    document.getElementById('contra-score-a').textContent = (factA.effective_confidence || factA.confidence).toFixed(2);
+                    document.getElementById('contra-body-a').innerHTML = `<strong>Object text:</strong> "${pair.object_a}"`;
+                    document.getElementById('contra-source-a').textContent = factA.source_page;
+                    document.getElementById('contra-meta-a').textContent = `Ingest Conf: ${factA.confidence.toFixed(2)} / ${factA.ingested_at.substring(0, 10)}`;
+
+                    // Populate Fact B Card details
+                    document.getElementById('contra-score-b').textContent = (factB.effective_confidence || factB.confidence).toFixed(2);
+                    document.getElementById('contra-body-b').innerHTML = `<strong>Object text:</strong> "${pair.object_b}"`;
+                    document.getElementById('contra-source-b').textContent = factB.source_page;
+                    document.getElementById('contra-meta-b').textContent = `Ingest Conf: ${factB.confidence.toFixed(2)} / ${factB.ingested_at.substring(0, 10)}`;
+                }
+            }
+
+            resolverWorkspace.style.display = 'flex';
+        }
+
+        // Force Winners click handles
+        document.getElementById('btn-force-a').addEventListener('click', () => resolveContradictionAction(activePair.fact_a, activePair.fact_b, activePair.fact_a));
+        document.getElementById('btn-force-b').addEventListener('click', () => resolveContradictionAction(activePair.fact_a, activePair.fact_b, activePair.fact_b));
+        document.getElementById('btn-auto-resolve').addEventListener('click', () => resolveContradictionAction(activePair.fact_a, activePair.fact_b, null));
+
+        async function resolveContradictionAction(factA, factB, winner) {
+            let url = `${API_URL}/admin/contradictions/resolve?fact_a=${factA}&fact_b=${factB}`;
+            if (winner) url += `&force_winner=${winner}`;
+            
+            try {
+                const res = await fetch(url, { method: 'POST' });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                
+                if (data.resolved) {
+                    alert(`Claim Conflict successfully resolved! Winner claim kept active, other claim marked superseded in SQLite.`);
+                } else {
+                    alert(`Decisive margin not reached: ${data.reason}. Fact pair remains active for manual review.`);
+                }
+                
+                loadContradictions();
+            } catch(e) {
+                alert('Contradiction resolution API failed.');
+            }
+        }
+
+
+        // ───── 4. Document Ingest & Scheduler Upkeep Admin ─────
+        const uploadDropzone = document.getElementById('upload-dropzone');
+        const fileInput = document.getElementById('file-input');
+        const fileListPreview = document.getElementById('file-list-preview');
+        const ingestSubmitBtn = document.getElementById('ingest-submit-btn');
+        
+        const ingestModal = document.getElementById('ingest-modal');
+        const ingestModalTitle = document.getElementById('ingest-modal-title');
+        const ingestModalStatus = document.getElementById('ingest-modal-status');
+        const ingestModalDetails = document.getElementById('ingest-modal-details');
+        const closeIngestModalBtn = document.getElementById('close-ingest-modal-btn');
+
+        const terminalBody = document.getElementById('terminal-body');
+
+        let filesQueue = [];
+
+        // Drag and drop events
+        uploadDropzone.addEventListener('click', () => fileInput.click());
+        uploadDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadDropzone.style.borderColor = 'var(--primary)';
+        });
+        uploadDropzone.addEventListener('dragleave', () => {
+            uploadDropzone.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+        });
+        uploadDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadDropzone.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+            handleFilesSelect(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', () => handleFilesSelect(fileInput.files));
+
+        function handleFilesSelect(files) {
+            for (let i = 0; i < files.length; i++) {
+                filesQueue.push(files[i]);
+            }
+            renderFilesQueue();
+        }
+
+        function renderFilesQueue() {
+            fileListPreview.innerHTML = '';
+            if (filesQueue.length === 0) {
+                ingestSubmitBtn.style.display = 'none';
+                return;
+            }
+
+            filesQueue.forEach((file, idx) => {
+                const card = document.createElement('div');
+                card.className = 'file-item-card';
+                card.innerHTML = `
+                    <span class="file-item-name">
+                        <svg viewBox="0 0 24 24" style="width:16px; height:16px; stroke:var(--primary); fill:none; stroke-width:2;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                        ${file.name}
+                    </span>
+                    <span class="remove-file-btn" onclick="removeFileFromQueue(${idx})">✕</span>
+                `;
+                fileListPreview.appendChild(card);
+            });
+
+            ingestSubmitBtn.style.display = 'block';
+        }
+
+        window.removeFileFromQueue = function(idx) {
+            filesQueue.splice(idx, 1);
+            renderFilesQueue();
+        };
+
+        // Submit files for ingestion
+        ingestSubmitBtn.addEventListener('click', async () => {
+            if (filesQueue.length === 0) return;
+
+            // Open Modal progress screen
+            ingestModal.classList.add('active');
+            ingestModalTitle.textContent = 'Ingesting Documents...';
+            ingestModalStatus.textContent = 'Layout chunking and entity mapping in progress.';
+            ingestModalDetails.innerHTML = 'Connecting to backend...';
+            closeIngestModalBtn.style.display = 'none';
+
+            const formData = new FormData();
+            filesQueue.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                // Log command to terminal console
+                logToTerminal(`make ingest BATCH_SIZE=${filesQueue.length}`, 'cmd');
+
+                const res = await fetch(`${API_URL}/ingest`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) throw new Error(`Ingest failed: ${res.statusText}`);
+                const data = await res.json();
+                
+                // Show modal success
+                ingestModalTitle.textContent = 'Ingestion Complete!';
+                ingestModalStatus.textContent = `Successfully processed ${data.count} source documents.`;
+                
+                let detailsText = '';
+                data.results.forEach(r => {
+                    if (r.error) {
+                        detailsText += `<span style="color:var(--danger)">✕ [ERROR] ${r.source.split('/').pop()}: ${r.error}</span><br>`;
+                    } else {
+                        detailsText += `<span style="color:var(--success)">✓ [SUCCESS] ${r.title} (live: ${r.is_live}, chunks: ${r.chunks}, conf: ${r.confidence})</span><br>`;
+                    }
+                });
+                ingestModalDetails.innerHTML = detailsText;
+                
+                // Log success to terminal
+                logToTerminal(JSON.stringify(data, null, 2), 'success');
+
+                // Clear queue
+                filesQueue = [];
+                renderFilesQueue();
+                checkHealth();
+
+            } catch (err) {
+                ingestModalTitle.textContent = 'Ingestion Failed';
+                ingestModalStatus.textContent = 'Errors encountered during LLM summarize pipelines.';
+                ingestModalDetails.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}. Check logs/app.log.</span>`;
+                
+                logToTerminal(err.message, 'error');
+            } finally {
+                closeIngestModalBtn.style.display = 'block';
+            }
+        });
+
+        closeIngestModalBtn.addEventListener('click', () => {
+            ingestModal.classList.remove('active');
+        });
+
+        // Trigger scheduler upkeep background jobs
+        const jobButtons = document.querySelectorAll('.btn-run-job');
+        jobButtons.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const jobName = btn.getAttribute('data-job');
+                btn.disabled = true;
+                btn.textContent = 'Executing...';
+                
+                logToTerminal(`make run-job JOB=${jobName}`, 'cmd');
+                
+                try {
+                    const res = await fetch(`${API_URL}/admin/run/${jobName}`, { method: 'POST' });
+                    if (!res.ok) throw new Error(`Job execution triggered error status: ${res.statusText}`);
+                    
+                    const data = await res.json();
+                    
+                    logToTerminal(JSON.stringify(data, null, 2), 'success');
+                } catch (err) {
+                    logToTerminal(err.message, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = getJobBtnText(jobName);
+                }
+            });
+        });
+
+        function getJobBtnText(jobName) {
+            if (jobName === 'decay_sweep') return 'Run Sweep';
+            if (jobName === 'episodic_prune') return 'Run Prune';
+            if (jobName === 'promote_episodic') return 'Run Promotion';
+            if (jobName === 'detect_procedures') return 'Extract Procedures';
+            if (jobName === 'lint_autofix') return 'Run Lint Repair';
+            return 'Execute';
+        }
+
+        function logToTerminal(message, type = 'log') {
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            if (type === 'cmd') line.className += ' cmd';
+            if (type === 'success') line.className += ' success-log';
+            if (type === 'error') line.className += ' error-log';
+            
+            line.textContent = message;
+            terminalBody.appendChild(line);
+            terminalBody.scrollTop = terminalBody.scrollHeight;
+        }
+
+        document.getElementById('clear-terminal-btn').addEventListener('click', () => {
+            terminalBody.innerHTML = '<div class="terminal-line success-log">Terminal console buffer cleared.</div>';
+        });
+
+    </script>
+</body>
+</html>
