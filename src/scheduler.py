@@ -16,7 +16,7 @@ for manual triggers, so users don't have to wait for cron.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 log = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ def register_job(name: str):
 
 @register_job("decay_sweep")
 async def _decay_sweep(state) -> dict:
-    from .wiki.lifecycle import LifecycleConfig, decay_sweep
     from .config import get_settings
+    from .wiki.lifecycle import LifecycleConfig, decay_sweep
     s = get_settings()
     cfg = LifecycleConfig(
         half_life_days=getattr(s, "decay_half_life_days", 90.0),
@@ -54,8 +54,8 @@ async def _decay_sweep(state) -> dict:
 
 @register_job("episodic_prune")
 async def _episodic_prune(state) -> dict:
-    from .wiki.episodic import prune_old_episodes
     from .config import get_settings
+    from .wiki.episodic import prune_old_episodes
     s = get_settings()
     deleted = prune_old_episodes(
         s.wiki_dir,
@@ -66,9 +66,9 @@ async def _episodic_prune(state) -> dict:
 
 @register_job("promote_episodic")
 async def _promote_episodic(state) -> dict:
-    from .wiki.promote import promote_episodic_to_semantic
-    from .llm import get_client
     from .config import get_settings
+    from .llm import get_client
+    from .wiki.promote import promote_episodic_to_semantic
     s = get_settings()
     return await promote_episodic_to_semantic(
         wiki_dir=s.wiki_dir,
@@ -82,9 +82,9 @@ async def _promote_episodic(state) -> dict:
 
 @register_job("detect_procedures")
 async def _detect_procedures(state) -> dict:
-    from .wiki.procedures import detect_procedures
-    from .llm import get_client
     from .config import get_settings
+    from .llm import get_client
+    from .wiki.procedures import detect_procedures
     s = get_settings()
     if state.procedures is None:
         return {"skipped": "procedures-store-not-initialised"}
@@ -121,9 +121,9 @@ async def _lint(state) -> dict:
 
 @register_job("page_compaction")
 async def _page_compaction(state) -> dict:
-    from .wiki.compaction import compact_bloated_pages
-    from .llm import get_client
     from .config import get_settings
+    from .llm import get_client
+    from .wiki.compaction import compact_bloated_pages
     s = get_settings()
     return await compact_bloated_pages(
         wiki_dir=s.wiki_dir,

@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import shutil
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,7 +41,10 @@ log = logging.getLogger(__name__)
 
 app = FastAPI(title="LLM-Wiki PoC", version="0.1.0")
 
+import contextlib
+
 from fastapi.staticfiles import StaticFiles
+
 app.mount("/dashboard", StaticFiles(directory="src/static", html=True), name="static")
 
 
@@ -105,15 +108,11 @@ async def _startup() -> None:
 @app.on_event("shutdown")
 async def _shutdown() -> None:
     if getattr(state, "scheduler", None) is not None:
-        try:
+        with contextlib.suppress(Exception):
             state.scheduler.shutdown(wait=False)
-        except Exception:
-            pass
     if getattr(state, "procedures", None) is not None:
-        try:
+        with contextlib.suppress(Exception):
             state.procedures.close()
-        except Exception:
-            pass
     await close_client()
     state.graph.close()
 
@@ -461,11 +460,12 @@ async def session_crystallize(body: CrystallizeBody) -> dict[str, Any]:
     """Phase F1: distil an exploration thread (matched by correlation IDs) into
     one wiki page filed under wiki/sources/crystallized-<slug>.md."""
     s = get_settings()
-    from .wiki.episodic import read_episodes
-    from .wiki.synth_page import SynthesisPageInputs, write_synthesis_page
-    from .llm import get_client
     import json as _json
     import re as _re
+
+    from .llm import get_client
+    from .wiki.episodic import read_episodes
+    from .wiki.synth_page import SynthesisPageInputs, write_synthesis_page
 
     episodes = read_episodes(
         s.wiki_dir,
@@ -544,7 +544,7 @@ async def session_crystallize(body: CrystallizeBody) -> dict[str, Any]:
         "correlation_ids": list(body.correlation_ids)[:50],
         "episode_count": len(episodes),
         "confidence": 0.7,
-        "created": datetime.now(timezone.utc).date().isoformat(),
+        "created": datetime.now(UTC).date().isoformat(),
     }
     pid = await write_synthesis_page(
         wiki_dir=s.wiki_dir,
@@ -569,8 +569,8 @@ async def session_crystallize(body: CrystallizeBody) -> dict[str, Any]:
 async def context_start(days: int = 7, top_pages: int = 5) -> dict[str, Any]:
     """Phase F2: Session-start briefing — recent episodic + most-accessed pages
     + open contradictions. The endpoint an MCP client / agent loads at session start."""
-    from .wiki.episodic import list_recent_episodes
     from .wiki.contradiction_resolver import list_unresolved_contradictions
+    from .wiki.episodic import list_recent_episodes
     s = get_settings()
 
     recent = list_recent_episodes(s.wiki_dir, days=max(1, days))
@@ -629,8 +629,8 @@ async def admin_contradictions_resolve(
     s = get_settings()
     if force_winner is not None:
         loser = fact_b if force_winner == fact_a else fact_a
-        from datetime import datetime, timezone
-        today = datetime.now(timezone.utc).date().isoformat()
+        from datetime import datetime
+        today = datetime.now(UTC).date().isoformat()
         try:
             await state.graph.supersede_fact(
                 old_fact_id=loser, new_fact_id=force_winner, valid_to=today,

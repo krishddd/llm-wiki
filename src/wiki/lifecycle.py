@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 log = logging.getLogger(__name__)
 
@@ -41,14 +41,14 @@ def _days_since(iso_ts: str | None, now: datetime | None = None) -> float | None
     try:
         # Tolerate both 'YYYY-MM-DD' and full ISO 8601.
         if len(iso_ts) <= 10:
-            ts = datetime.fromisoformat(iso_ts).replace(tzinfo=timezone.utc)
+            ts = datetime.fromisoformat(iso_ts).replace(tzinfo=UTC)
         else:
             ts = datetime.fromisoformat(iso_ts.replace("Z", "+00:00"))
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
     except ValueError:
         return None
-    n = now or datetime.now(timezone.utc)
+    n = now or datetime.now(UTC)
     return max(0.0, (n - ts).total_seconds() / 86400.0)
 
 
@@ -91,7 +91,7 @@ async def mark_accessed(graph, page_ids: list[str], *, cfg: LifecycleConfig) -> 
     """
     if not cfg.enabled or not page_ids:
         return
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     now_iso = now.isoformat()
     window_start = (now - timedelta(days=cfg.reinforcement_window_days)).isoformat()
 
@@ -168,7 +168,7 @@ async def decay_sweep(graph, *, cfg: LifecycleConfig) -> dict:
     """
     if not cfg.enabled:
         return {"facts_processed": 0, "facts_decayed": 0, "skipped": "lifecycle_disabled"}
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     processed = 0
     decayed = 0
     confs_after: list[float] = []

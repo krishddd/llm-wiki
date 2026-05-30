@@ -137,6 +137,6 @@ def truncate_block(content: str, kind: ExcerptKind, max_chars: int = 1200) -> st
         kept.append("| ... | _(truncated)_ |")
         return "\n".join(kept)
     if kind == "code":
-        body = content.strip("`").split("\n", 1)[-1]
+        content.strip("`").split("\n", 1)[-1]
         return content[:max_chars] + "\n... (truncated) ...\n```"
     return content[:max_chars]

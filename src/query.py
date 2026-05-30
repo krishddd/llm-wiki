@@ -19,23 +19,22 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from .config import Settings, get_settings
 from .llm import OllamaClient, get_client
 from .search.hybrid import hybrid_search
-from .search.intent import IntentProfile, profile_for
+from .search.intent import profile_for
 from .search.multi_query import paraphrase, rrf_fuse_pages
-from .search.multimodal import MultimodalExcerpt, extract_excerpts, truncate_block
+from .search.multimodal import extract_excerpts, truncate_block
 from .search.relevance_eval import decide as crag_decide
 from .search.relevance_eval import evaluate_batch as crag_evaluate
 from .synth.blocks import AnswerBlock, number_citations, parse_blocks
 from .synth.claims import Claim, aggregate_confidence, parse_claims, strip_confidence_markers
 from .synth.followups import suggest_followups
 from .synth.reflect import critique_answer, should_refine
-from .wiki.episodic import append_episode
 
 log = logging.getLogger(__name__)
 
@@ -525,7 +524,7 @@ class QueryEngine:
                 for ent in meta.get("entity_refs") or []:
                     if ent not in entities_to_query:
                         entities_to_query.append(ent)
-            
+
             for ent in entities_to_query[:15]:
                 try:
                     facts = await self.graph.active_facts_for(ent)

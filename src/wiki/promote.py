@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import logging
 import re
-from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from ..llm import OllamaClient
@@ -256,7 +255,7 @@ async def promote_episodic_to_semantic(
             ],
             "correlation_ids": cor_ids[:50],
             "confidence": 0.65,
-            "created": datetime.now(timezone.utc).date().isoformat(),
+            "created": datetime.now(UTC).date().isoformat(),
         }
         pid = await write_synthesis_page(
             wiki_dir=Path(wiki_dir),

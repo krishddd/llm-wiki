@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 import math
 import shutil
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Awaitable, Callable
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class _NumpyCosineIndex:
             return 0.0
         na = math.sqrt(sum(x * x for x in a)) or 1.0
         nb = math.sqrt(sum(x * x for x in b)) or 1.0
-        return sum(x * y for x, y in zip(a, b)) / (na * nb)
+        return sum(x * y for x, y in zip(a, b, strict=False)) / (na * nb)
 
     def upsert(self, page_id: str, vec: list[float], text: str, meta: dict) -> None:
         self._vecs[page_id] = list(vec)

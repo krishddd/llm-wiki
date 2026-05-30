@@ -68,7 +68,7 @@ class BM25Index:
             # lexical matches and should surface for downstream reranking.
             query_set = set(tokens)
             scores = self._bm25.get_scores(tokens)
-            ranked = sorted(zip(self._ordered_ids, scores), key=lambda kv: kv[1], reverse=True)
+            ranked = sorted(zip(self._ordered_ids, scores, strict=False), key=lambda kv: kv[1], reverse=True)
             out: list[str] = []
             for pid, _ in ranked:
                 if query_set & set(self._docs[pid]):

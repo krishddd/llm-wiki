@@ -105,7 +105,7 @@ def layout_aware_chunks(
 
     if overlap_chars > 0 and len(chunks) > 1:
         overlapped: list[str] = [chunks[0]]
-        for prev, curr in zip(chunks, chunks[1:]):
+        for prev, curr in zip(chunks, chunks[1:], strict=False):
             # Clamp: if a chunk is shorter than overlap_chars we'd otherwise
             # duplicate the entire previous chunk, ballooning the token count.
             n = min(overlap_chars, max(0, len(prev) // 4))

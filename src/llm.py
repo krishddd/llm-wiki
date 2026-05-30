@@ -6,6 +6,7 @@ If `model_fast == model_reason`, the fallback is skipped and the original error 
 from __future__ import annotations
 
 import base64
+import contextlib
 import logging
 from pathlib import Path
 
@@ -99,7 +100,7 @@ class OllamaClient:
             # retrying the same overloaded model.
             if self.settings.model_fast and self.settings.model_fast != self.settings.model_reason:
                 log.warning(
-                    "qwen failed, falling back to %s" % self.settings.model_fast,
+                    f"qwen failed, falling back to {self.settings.model_fast}",
                     extra={"metadata": {"error": str(e)}},
                 )
                 return await self.llama(prompt, system, temperature=temperature)
@@ -133,10 +134,8 @@ class OllamaClient:
         if vec:
             if len(self._embed_cache) >= self._EMBED_CACHE_MAX:
                 # Evict oldest insertion.
-                try:
+                with contextlib.suppress(StopIteration):
                     self._embed_cache.pop(next(iter(self._embed_cache)))
-                except StopIteration:
-                    pass
             self._embed_cache[key] = vec
         return vec
 

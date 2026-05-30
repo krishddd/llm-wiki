@@ -8,7 +8,7 @@ import logging.handlers
 import secrets
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 correlation_id_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("correlation_id", default="-")
@@ -23,14 +23,14 @@ def new_correlation_id() -> str:
 def new_event_id() -> str:
     global _event_counter
     _event_counter += 1
-    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     return f"EVT-{ts}-{_event_counter:04d}"
 
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "event_id": new_event_id(),
             "correlation_id": correlation_id_ctx.get(),
             "severity": record.levelname,

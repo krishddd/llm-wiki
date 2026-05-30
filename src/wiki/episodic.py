@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def append_episode(
     d = episodic_dir(wiki_dir)
     today = date.today().isoformat()
     path = d / f"{today}.md"
-    now_ts = datetime.now(timezone.utc).strftime("%H:%M:%SZ")
+    now_ts = datetime.now(UTC).strftime("%H:%M:%SZ")
     metadata = metadata or {}
     meta_str = ""
     if metadata:
@@ -93,7 +93,7 @@ def read_episodes(
     correlation_ids: list[str] | None = None,
     days: int = 14,
 ) -> list[dict]:
-    """Read raw episodic entries with their bodies (Phase F1).
+    r"""Read raw episodic entries with their bodies (Phase F1).
 
     `list_recent_episodes` returns titles only; `read_episodes` reads each
     `wiki/episodic/<date>.md`, splits on the entry headers, and includes

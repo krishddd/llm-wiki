@@ -19,9 +19,8 @@ jobs:
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; \
           elif [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install ruff mypy pytest pytest-cov pytest-asyncio
-      - name: Ruff (non-blocking)
-        continue-on-error: true
-        run: ruff check src tests || true
+      - name: Ruff
+        run: ruff check src tests
       - name: Mypy (non-blocking)
         continue-on-error: true
         run: mypy src || true

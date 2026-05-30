@@ -11,7 +11,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from .config import Settings, get_settings
@@ -338,7 +338,7 @@ class Ingestor:
         for nid, npred, _ in new_rows:
             new_by_pred.setdefault(str(npred).strip().lower(), int(nid))
 
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = datetime.now(UTC).date().isoformat()
         n = 0
         for fid, fpred, fobj in old_rows:
             obj = str(fobj or "").lower()
@@ -685,7 +685,6 @@ class Ingestor:
 
         # ── Compute Contextual-Retrieval preamble BEFORE writing the page ──
         # Otherwise the preamble field can't make it into the on-disk frontmatter.
-        search_text = f"{title}\n{summary}"
         if self.s.ingest_contextual_retrieval and summary:
             try:
                 from .search.contextual import contextualize_chunk, merge_context_with_chunk
@@ -697,7 +696,7 @@ class Ingestor:
                     semaphore=self._sem,
                 )
                 if preamble:
-                    search_text = merge_context_with_chunk(preamble, f"{title}\n{summary}")
+                    merge_context_with_chunk(preamble, f"{title}\n{summary}")
                     frontmatter["context_preamble"] = preamble[:300]
             except Exception as e:
                 log.debug("contextual preamble failed", extra={"metadata": {"error": str(e)[:120]}})
@@ -707,7 +706,6 @@ class Ingestor:
 
         entities_added = 0
         contradictions = 0
-        facts_added = 0
         if self.graph and entities:
             # Run contradiction check BEFORE upserting (compare vs. pre-existing pages).
             try:
@@ -721,7 +719,7 @@ class Ingestor:
             try:
                 claims = await self._extract_claims(summary, entities)
                 if claims:
-                    facts_added = await self._persist_claims(pid, claims)
+                    await self._persist_claims(pid, claims)
             except Exception as e:
                 log.debug("claim extraction/persist failed",
                           extra={"metadata": {"error": str(e)[:120]}})
@@ -873,7 +871,7 @@ class Ingestor:
             *(self.ingest_file(p) for p in paths), return_exceptions=True
         )
         out: list[IngestResult] = []
-        for path, res in zip(paths, raw):
+        for path, res in zip(paths, raw, strict=False):
             if isinstance(res, BaseException):
                 # Log the FULL traceback so we can see the exact failing line.
                 import traceback

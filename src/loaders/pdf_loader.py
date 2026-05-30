@@ -35,8 +35,8 @@ def _extract_text_pypdf(path: Path) -> list[str]:
 def _ocr_page(path: Path, page_num: int) -> str:
     """Render page → image → pytesseract. Returns "" on any failure."""
     try:
-        from pdf2image import convert_from_path
         import pytesseract
+        from pdf2image import convert_from_path
     except Exception as e:
         log.debug("ocr skipped, libs missing", extra={"metadata": {"error": str(e)[:120]}})
         return ""

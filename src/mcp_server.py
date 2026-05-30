@@ -18,7 +18,6 @@ Requires `mcp` Python SDK:  pip install "mcp[cli]"
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 from pathlib import Path
 
@@ -69,7 +68,7 @@ def _build_server(api: str):
         raise SystemExit(
             "MCP SDK not installed. Run: pip install \"mcp[cli]\"\n"
             f"Original error: {e}"
-        )
+        ) from e
 
     mcp = FastMCP("llm-wiki")
 

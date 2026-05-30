@@ -15,7 +15,7 @@ import logging
 import re
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..llm import OllamaClient
@@ -95,7 +95,7 @@ class ProcedureStore:
         """Record a query observation. Returns (pattern_hash, new_hit_count)."""
         import json
         ph = _pattern_hash(query)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         cur = self._conn.cursor()
         cur.execute(
             "SELECT hit_count, canonical_pages FROM procedures WHERE pattern_hash = ?",
@@ -159,7 +159,7 @@ class ProcedureStore:
         cur = self._conn.cursor()
         cur.execute(
             "UPDATE procedures SET promoted_at = ? WHERE pattern_hash = ?",
-            (datetime.now(timezone.utc).isoformat(), pattern_hash),
+            (datetime.now(UTC).isoformat(), pattern_hash),
         )
         self._conn.commit()
 
@@ -260,7 +260,7 @@ async def detect_procedures(
             "intent": c["intent"],
             "anchor_pages": list(sources)[:10],
             "pattern_hash": c["pattern_hash"],
-            "created": datetime.now(timezone.utc).date().isoformat(),
+            "created": datetime.now(UTC).date().isoformat(),
         }
         path = proc_dir / f"{_slug(title)}.md"
         try:

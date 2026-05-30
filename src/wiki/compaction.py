@@ -45,7 +45,7 @@ async def compact_bloated_pages(
     sources_dir = Path(wiki_dir) / "sources"
     history_dir = Path(wiki_dir) / "archive" / "history"
     review_dir = Path(wiki_dir) / "review" / "compact"
-    
+
     history_dir.mkdir(parents=True, exist_ok=True)
     review_dir.mkdir(parents=True, exist_ok=True)
 
@@ -79,7 +79,7 @@ async def compact_bloated_pages(
         # 1) Separate the core body from any ## Superseded blocks
         body = page.body or ""
         superseded_blocks = []
-        
+
         # Regex to locate ## Superseded sections
         split_parts = re.split(r"(##\s+Superseded\s+\(.*?\).*?)(?=##\s+|$)", body, flags=re.DOTALL | re.IGNORECASE)
         core_body_parts = []
@@ -88,7 +88,7 @@ async def compact_bloated_pages(
                 superseded_blocks.append(part.strip())
             else:
                 core_body_parts.append(part)
-        
+
         core_body = "\n\n".join(core_body_parts).strip()
 
         # 2) Ask Qwen to compact the core body seamlessly
@@ -112,7 +112,7 @@ async def compact_bloated_pages(
             archive_name = f"{path.stem}-history.md"
             archive_path = history_dir / archive_name
             today = date.today().isoformat()
-            
+
             archive_content = (
                 "---\n"
                 f"title: \"{fm.get('title', path.stem)} - Historical Revisions\"\n"

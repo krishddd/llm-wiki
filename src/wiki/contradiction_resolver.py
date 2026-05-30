@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -57,14 +57,14 @@ def _recency_score(ingested_at: str | None, now: datetime | None = None) -> floa
         return 0.5
     try:
         if len(ingested_at) <= 10:
-            ts = datetime.fromisoformat(ingested_at).replace(tzinfo=timezone.utc)
+            ts = datetime.fromisoformat(ingested_at).replace(tzinfo=UTC)
         else:
             ts = datetime.fromisoformat(ingested_at.replace("Z", "+00:00"))
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
     except Exception:
         return 0.5
-    n = now or datetime.now(timezone.utc)
+    n = now or datetime.now(UTC)
     days = max(0.0, (n - ts).total_seconds() / 86400.0)
     # 1.0 today, ~0.5 at 180 days, ~0.0 at 365.
     return max(0.0, 1.0 - (days / 365.0))
@@ -155,7 +155,7 @@ async def resolve_contradiction(
         winner, loser = a, b
     else:
         winner, loser = b, a
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     try:
         await graph.supersede_fact(
             old_fact_id=loser.fact_id,

@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Awaitable, Callable
 
 
 @dataclass
@@ -40,7 +40,7 @@ def _cos(a: list[float], b: list[float]) -> float:
         return 0.0
     na = math.sqrt(sum(x * x for x in a)) or 1.0
     nb = math.sqrt(sum(x * x for x in b)) or 1.0
-    return sum(x * y for x, y in zip(a, b)) / (na * nb)
+    return sum(x * y for x, y in zip(a, b, strict=False)) / (na * nb)
 
 
 async def mmr_select(

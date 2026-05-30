@@ -17,13 +17,13 @@ import json
 import logging
 import re
 import shutil
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from .config import Settings, get_settings
 from .llm import OllamaClient, get_client
 from .logging_config import audit
-from .wiki.pages import PageStore, read_page
+from .wiki.pages import PageStore
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ def _append_orphan_backlinks(wiki_dir: Path, orphan_ids: list[str]) -> int:
     marker = f"\n## Orphans (linked {today})\n"
     if marker.strip() in existing:
         # Don't duplicate the marker; append items only.
-        block = []
+        pass
     else:
         lines.append(marker)
         lines.append("")
@@ -151,14 +151,14 @@ def _is_stale(frontmatter: dict, lifecycle_row: dict | None, *, conf_thresh: flo
         return False
     try:
         if len(str(last_accessed)) <= 10:
-            ts = datetime.fromisoformat(str(last_accessed)).replace(tzinfo=timezone.utc)
+            ts = datetime.fromisoformat(str(last_accessed)).replace(tzinfo=UTC)
         else:
             ts = datetime.fromisoformat(str(last_accessed).replace("Z", "+00:00"))
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
     except Exception:
         return False
-    age = (datetime.now(timezone.utc) - ts).total_seconds() / 86400.0
+    age = (datetime.now(UTC) - ts).total_seconds() / 86400.0
     return age >= days_thresh
 
 

@@ -139,8 +139,8 @@ async def hybrid_search(
     # Best-effort; never blocks the response.
     if graph is not None and out:
         try:
-            from ..wiki.lifecycle import LifecycleConfig, mark_accessed
             from ..config import get_settings
+            from ..wiki.lifecycle import LifecycleConfig, mark_accessed
             s = get_settings()
             cfg = LifecycleConfig(
                 half_life_days=getattr(s, "decay_half_life_days", 90.0),

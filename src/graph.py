@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import sqlite3
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -78,10 +80,8 @@ def _migrate_relations_table(conn: sqlite3.Connection) -> None:
         ("superseded_by", "ALTER TABLE relations ADD COLUMN superseded_by INTEGER"),
     ):
         if col not in cols:
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(ddl)
-            except sqlite3.OperationalError:
-                pass
     conn.commit()
 
 
@@ -101,18 +101,14 @@ def _migrate_lifecycle_columns(conn: sqlite3.Connection) -> None:
         ("original_confidence", "ALTER TABLE facts ADD COLUMN original_confidence REAL"),
     ):
         if col not in cols:
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cur.execute(ddl)
-            except sqlite3.OperationalError:
-                pass
     # Backfill original_confidence for any pre-existing rows.
-    try:
+    with contextlib.suppress(sqlite3.OperationalError):
         cur.execute(
             "UPDATE facts SET original_confidence = confidence "
             "WHERE original_confidence IS NULL"
         )
-    except sqlite3.OperationalError:
-        pass
     # Page-level access counters
     cur.execute(
         """
@@ -172,13 +168,11 @@ class KnowledgeGraph:
                 best_score = score
                 best_id = canonical_id if canonical_id is not None else eid
         if best_id is not None and best_score >= self.fuzzy_threshold:
-            try:
+            with contextlib.suppress(sqlite3.Error):
                 cur.execute(
                     "INSERT OR IGNORE INTO entities(name, type, canonical_id) VALUES (?, ?, ?)",
                     (name, type_, best_id),
                 )
-            except sqlite3.Error:
-                pass
             self._conn.commit()
             return best_id
         cur.execute("INSERT OR IGNORE INTO entities(name, type) VALUES (?, ?)", (name, type_))
@@ -320,8 +314,8 @@ class KnowledgeGraph:
 
     async def supersede_fact(self, *, old_fact_id: int, new_fact_id: int, valid_to: str | None = None) -> None:
         """Mark `old_fact_id` as superseded by `new_fact_id` as of `valid_to` (defaults to now)."""
-        from datetime import datetime, timezone
-        ts = valid_to or datetime.now(timezone.utc).date().isoformat()
+        from datetime import datetime
+        ts = valid_to or datetime.now(UTC).date().isoformat()
         async with self._lock:
             cur = self._conn.cursor()
             cur.execute(
