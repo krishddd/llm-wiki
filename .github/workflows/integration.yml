@@ -1,10 +1,8 @@
 name: integration
+# Requires a REMOTE_OLLAMA_HOST repo secret pointing at a reachable Ollama server.
+# Disabled on push to main — run manually via "Run workflow" once the secret is set.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * *"
-  push:
-    branches: [main]
 
 jobs:
   remote-ollama:
@@ -18,7 +16,7 @@ jobs:
           if [ -z "$OLLAMA_HOST" ]; then echo "REMOTE_OLLAMA_HOST secret missing"; exit 1; fi
       - name: Build + up
         run: |
-          cp .env.example .env
+          if [ -f .env.example ]; then cp .env.example .env; else touch .env; fi
           docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
       - name: Wait for /health
         run: |
@@ -30,7 +28,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
       - name: Install test deps
-        run: pip install -r requirements-dev.txt
+        run: |
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; \
+          else pip install -r requirements.txt pytest pytest-asyncio; fi
       - name: Integration tests
         run: pytest -q -m integration
       - name: Dump logs
