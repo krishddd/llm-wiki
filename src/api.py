@@ -47,6 +47,10 @@ from fastapi.staticfiles import StaticFiles
 
 app.mount("/dashboard", StaticFiles(directory="src/static", html=True), name="static")
 
+# Agentic RAG layer — additive, new routes only (POST /query/agentic, GET /agentic/health).
+from .api_agentic import router as _agentic_router  # noqa: E402
+app.include_router(_agentic_router)
+
 
 class _State:
     bm25: BM25Index
