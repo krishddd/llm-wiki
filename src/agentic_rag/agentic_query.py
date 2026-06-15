@@ -119,7 +119,7 @@ async def _final_synthesize(
     lock = getattr(engine, "_agentic_synth_lock", None)
     if lock is None:
         lock = asyncio.Lock()
-        setattr(engine, "_agentic_synth_lock", lock)
+        engine._agentic_synth_lock = lock
 
     async def _stub(query_text: str, top_k: int, graph_expand: bool, hyde_text):
         # Return the accumulated set; engine.answer() will pick its own top_k.

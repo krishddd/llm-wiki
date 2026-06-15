@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from ..llm import OllamaClient, get_client
 from ..query import QueryEngine, QueryResult
-from ..search.intent import heuristic_intent, classify_intent_llm
+from ..search.intent import classify_intent_llm, heuristic_intent
 from .agentic_query import agentic_answer
 from .config import get_agentic_settings
 from .planner import plan_retrieval

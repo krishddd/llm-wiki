@@ -10,15 +10,14 @@ from dataclasses import dataclass
 
 import pytest
 
+from src.agentic_rag.agentic_query import agentic_answer
 from src.agentic_rag.feedback_rewriter import rewrite_for_gaps
 from src.agentic_rag.planner import plan_retrieval
+from src.agentic_rag.search_fanout import SubTask, execute_fanout
 from src.agentic_rag.sufficient_context import (
     SufficientContextVerdict,
     evaluate_sufficient_context,
 )
-from src.agentic_rag.search_fanout import execute_fanout, SubTask
-from src.agentic_rag.agentic_query import agentic_answer
-
 
 # ───── Fakes ─────
 

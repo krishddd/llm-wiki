@@ -49,6 +49,7 @@ app.mount("/dashboard", StaticFiles(directory="src/static", html=True), name="st
 
 # Agentic RAG layer — additive, new routes only (POST /query/agentic, GET /agentic/health).
 from .api_agentic import router as _agentic_router  # noqa: E402
+
 app.include_router(_agentic_router)
 
 
