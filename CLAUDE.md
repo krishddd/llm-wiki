@@ -183,6 +183,13 @@ load_elements (multi-format)
 
 ### Query
 
+`POST /query` now enters through the **agentic orchestrator** (`agentic_rag/orchestrator.py`):
+it assesses question complexity and sends factual/simple queries to the fast single-pass
+path (zero overhead) while multi_hop/synthesis/exhaustive go through the iterative agentic
+loop (plan → fanout → sufficient-context check → gap rewriter → repeat). Request flag
+`agentic`: omit = auto-decide (default), `true` = force loop, `false` = force single-pass.
+Disable globally with `AGENTIC_ENABLED=false`. Both paths share the synthesis below.
+
 ```
 intent classifier (factual / multi_hop / synthesis / exhaustive)
   → decompose (compound)

@@ -289,7 +289,9 @@ class QueryEngine:
             log.warning("decompose failed", extra={"metadata": {"error": str(e)[:200]}})
             return [question]
 
-    async def _retrieve_one(self, query_text: str, top_k: int, graph_expand: bool, hyde_text: str | None):
+    async def _retrieve_one(
+        self, query_text: str, top_k: int, graph_expand: bool, hyde_text: str | None, use_mmr: bool = True
+    ):
         return await hybrid_search(
             query_text,
             bm25=self.bm25,
@@ -299,6 +301,7 @@ class QueryEngine:
             top_k_rerank=top_k,
             graph_expand=graph_expand,
             hyde_text=hyde_text,
+            use_mmr=use_mmr,
         )
 
     # ── Save-back ──
@@ -371,6 +374,7 @@ class QueryEngine:
         # 0) Adaptive retrieval profile — pick top_k / full-page mode / graph
         # expand by question intent. Heuristic first, gemma fallback.
         adaptive_on = self.s.query_adaptive_retrieval if adaptive is None else adaptive
+        use_mmr = True
         if adaptive_on:
             try:
                 prof = await profile_for(self.c, question, default_top_k=top_k)
@@ -378,6 +382,7 @@ class QueryEngine:
                 graph_expand = graph_expand and prof.graph_expand
                 full_page_mode = prof.full_page_mode
                 intent_label = prof.intent
+                use_mmr = prof.use_mmr
                 log.info(
                     "intent profile",
                     extra={"metadata": {
@@ -463,7 +468,9 @@ class QueryEngine:
                 ranked_lists: list[list[str]] = []
                 page_objs: dict[str, Any] = {}
                 for q in queries_for_sq:
-                    batch = await self._retrieve_one(q, top_k=top_k, graph_expand=graph_expand, hyde_text=hyde_text)
+                    batch = await self._retrieve_one(
+                        q, top_k=top_k, graph_expand=graph_expand, hyde_text=hyde_text, use_mmr=use_mmr
+                    )
                     ranked_lists.append([r.page_id for r in batch])
                     for r in batch:
                         prev = page_objs.get(r.page_id)

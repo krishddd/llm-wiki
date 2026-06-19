@@ -155,6 +155,10 @@ class QueryBody(BaseModel):
     use_hyde: bool = True
     decompose: bool = True
     save_back: bool = True
+    # Agentic routing: None = orchestrator auto-decides (default — simple queries take
+    # the fast path, complex ones get the iterative loop); True = force the agentic loop;
+    # False = force the legacy single-pass pipeline (honours use_hyde / decompose).
+    agentic: bool | None = None
 
 
 class CitationExcerptOut(BaseModel):
@@ -195,6 +199,7 @@ class QueryResponse(BaseModel):
     saved_page: str | None = None
     retrieval_quality: str = "correct"   # CRAG verdict: correct | ambiguous | incorrect
     intent: str = "synthesis"            # factual | multi_hop | synthesis | exhaustive
+    reasoner: str = "qwen"               # qwen (default synth) | solver (VibeThinker routed)
     quality_score: float = 1.0           # reflection critique 0-1
     quality_issues: list[str] = []
     per_claim_confidences: list[dict] = []   # [{"citation": "...", "confidence": 0.92}, ...]
@@ -251,14 +256,30 @@ async def ingest(files: list[UploadFile] = File(...)) -> dict[str, Any]:
 @app.post("/query", response_model=QueryResponse)
 async def query(body: QueryBody) -> QueryResponse:
     s = get_settings()
-    result = await state.query_engine.answer(
-        body.question,
-        top_k=body.top_k,
-        graph_expand=body.graph_expand,
-        use_hyde=body.use_hyde,
-        decompose=body.decompose,
-        save_back=body.save_back,
-    )
+    # Front door: the orchestrator auto-decides fast-path vs. agentic loop by
+    # question complexity. `agentic=false` forces the legacy single-pass pipeline
+    # (which honours use_hyde / decompose); `agentic=true` forces the loop.
+    from .agentic_rag.config import get_agentic_settings
+    ag = get_agentic_settings()
+    if ag.agentic_enabled and body.agentic is not False:
+        from .agentic_rag.orchestrator import QueryOrchestrator
+        orch = QueryOrchestrator(state.query_engine)
+        result = await orch.process(
+            body.question,
+            top_k=body.top_k,
+            graph_expand=body.graph_expand,
+            save_back=body.save_back,
+            force_agentic=bool(body.agentic),
+        )
+    else:
+        result = await state.query_engine.answer(
+            body.question,
+            top_k=body.top_k,
+            graph_expand=body.graph_expand,
+            use_hyde=body.use_hyde,
+            decompose=body.decompose,
+            save_back=body.save_back,
+        )
     # Episodic log of every query
     if s.episodic_logging:
         try:
@@ -315,6 +336,7 @@ async def query(body: QueryBody) -> QueryResponse:
         grounded=getattr(result, "grounded", True),
         retrieval_quality=getattr(result, "retrieval_quality", "correct"),
         intent=getattr(result, "intent", "synthesis"),
+        reasoner=getattr(result, "reasoner", "qwen"),
         quality_score=getattr(result, "quality_score", 1.0),
         quality_issues=getattr(result, "quality_issues", []) or [],
         per_claim_confidences=getattr(result, "per_claim_confidences", []) or [],

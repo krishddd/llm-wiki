@@ -695,7 +695,7 @@ class Ingestor:
         # Otherwise the preamble field can't make it into the on-disk frontmatter.
         if self.s.ingest_contextual_retrieval and summary:
             try:
-                from .search.contextual import contextualize_chunk, merge_context_with_chunk
+                from .search.contextual import contextualize_chunk
                 preamble = await contextualize_chunk(
                     self.c,
                     doc_title=title,
@@ -704,7 +704,8 @@ class Ingestor:
                     semaphore=self._sem,
                 )
                 if preamble:
-                    merge_context_with_chunk(preamble, f"{title}\n{summary}")
+                    # The preamble is merged with the chunk text at index time inside
+                    # `_index_page_chunks`; here we only need to persist it to frontmatter.
                     frontmatter["context_preamble"] = preamble[:300]
             except Exception as e:
                 log.debug("contextual preamble failed", extra={"metadata": {"error": str(e)[:120]}})
