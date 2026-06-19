@@ -549,6 +549,84 @@ class Ingestor:
                 except Exception as e:
                     log.warning("Dense chunk upsert failed", extra={"metadata": {"error": str(e)[:160]}})
 
+    # Display-math and inline-math spans → first-class formula media nodes.
+    _FORMULA_SPAN_RE = re.compile(r"\$\$.+?\$\$|\$[^$\n]{2,}?\$|\\\[.+?\\\]", re.DOTALL)
+    _MEDIA_REL_BY_KIND = {"table": "MEASURES", "image": "DEPICTS", "code": "REFERENCES", "formula": "DEFINES"}
+    _MAX_FORMULA_NODES = 30
+
+    async def _populate_media_graph(self, pid: str, title: str, domain: str, elements, entities) -> None:
+        """Phase 1: create media_nodes (table/image/code/formula) for a page, embed
+        each as its own dense unit, and link them to entities by name presence.
+
+        Best-effort and idempotent — clears the page's existing media nodes first so a
+        re-ingest replaces rather than duplicates.
+        """
+        try:
+            await self.graph.delete_media_for_page(pid)
+        except Exception as e:
+            log.debug("media cleanup failed", extra={"metadata": {"error": str(e)[:120]}})
+
+        ent_list = [(e.name, e.type.upper()) for e in entities if getattr(e, "name", "")]
+
+        # Collect modality units in document order.
+        units: list[tuple[str, str, str | None]] = []   # (kind, content, caption)
+        formula_count = 0
+        for el in elements:
+            meta = getattr(el, "meta", None) or {}
+            if el.kind == "table":
+                units.append(("table", el.content or "", meta.get("caption")))
+            elif el.kind == "image":
+                cap = meta.get("caption") or meta.get("description")
+                units.append(("image", cap or meta.get("path") or el.content or "[image]", cap))
+            elif el.kind == "code":
+                units.append(("code", el.content or "", meta.get("lang")))
+            elif el.kind in ("text", "heading") and el.content:
+                for m in self._FORMULA_SPAN_RE.findall(el.content):
+                    if formula_count >= self._MAX_FORMULA_NODES:
+                        break
+                    units.append(("formula", m.strip(), None))
+                    formula_count += 1
+
+        linked = 0
+        for n, (kind, content, caption) in enumerate(units):
+            if not content or not content.strip():
+                continue
+            emb_id = f"{pid}#media#{n}"
+            try:
+                mid = await self.graph.add_media_node(
+                    page_id=pid, kind=kind, content=content[:4000],
+                    caption=(caption or None), ordinal=n, embedding_id=emb_id,
+                )
+            except Exception as e:
+                log.debug("media node insert failed", extra={"metadata": {"error": str(e)[:120]}})
+                continue
+            # Embed the unit as its own dense vector so it is independently retrievable.
+            try:
+                embed_text = f"{caption or ''}\n{content}".strip()[:4000]
+                await self.dense.upsert(
+                    emb_id, embed_text,
+                    meta={"title": title, "parent_id": pid, "media_kind": kind, "domain": domain},
+                )
+            except Exception as e:
+                log.debug("media embed failed", extra={"metadata": {"error": str(e)[:120]}})
+            # Link to entities whose name appears in the unit's content/caption.
+            hay = f"{content}\n{caption or ''}".lower()
+            rel = self._MEDIA_REL_BY_KIND.get(kind, "DEPICTS")
+            for ename, etype in ent_list:
+                if len(ename) >= 3 and ename.lower() in hay:
+                    try:
+                        await self.graph.link_media_entity(
+                            media_id=mid, entity_name=ename, entity_type=etype, rel_type=rel,
+                        )
+                        linked += 1
+                    except Exception:
+                        pass
+        if units:
+            log.info(
+                "media graph populated",
+                extra={"metadata": {"page": pid, "nodes": len(units), "links": linked}},
+            )
+
     async def ingest_file(self, source_path: str | Path) -> IngestResult:
         src = Path(source_path)
         title = src.stem.replace("_", " ").replace("-", " ").title()
@@ -781,6 +859,14 @@ class Ingestor:
                 log.debug("claim extraction/persist failed",
                           extra={"metadata": {"error": str(e)[:120]}})
         await self._index_page_chunks(pid, title, body, frontmatter)
+
+        # ── Multimodal graph (Phase 1): persist tables/images/code/formulas as
+        # first-class media nodes linked to entities, each embedded as its own unit.
+        if self.s.graph_multimodal_nodes and self.graph and self.dense:
+            try:
+                await self._populate_media_graph(pid, title, domain, elements, entities)
+            except Exception as e:
+                log.debug("media graph population failed", extra={"metadata": {"error": str(e)[:160]}})
 
         # ── Memory evolution / Reconciliation pass (A-Mem 2026) ──
         # After publishing the new page, propose edits to existing pages most

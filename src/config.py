@@ -84,6 +84,12 @@ class Settings(BaseSettings):
     ingest_agentic_planning: bool = True
     ingest_planning_llm: bool = False
 
+    # Multimodal knowledge graph (Phase 1) — persist tables/images/code/formulas as
+    # first-class media_nodes linked to entities, each embedded as its own dense unit.
+    # Off by default (populating requires re-ingest). Retrieval through media nodes is
+    # a later phase; Phase 1 is data-only.
+    graph_multimodal_nodes: bool = False
+
     # Privacy / secret redaction — strip API keys, JWTs, private keys and plaintext
     # passwords from raw source text BEFORE it reaches the summariser / claims / graph /
     # embeddings / on-disk page. Audit-logged as PRIVACY_REDACT. (CLAUDE.md policy.)

@@ -305,6 +305,12 @@ Conservative by design — high-precision patterns only, to avoid corrupting pro
 
 - **Entity types**: `PERSON`, `ORG`, `CONCEPT`, `PLACE`, `EVENT`
 - **Relation types**: `RELATES_TO`, `PART_OF`, `CONTRADICTS`, `SUPPORTS`, `AUTHORED_BY`, `OCCURRED_IN`
+- **Media nodes** (multimodal graph Phase 1, `GRAPH_MULTIMODAL_NODES`, default off):
+  `media_nodes` (kinds `table|image|code|formula`) + `media_entities` edges
+  (`DEPICTS|MEASURES|DEFINES|REFERENCES`). Populated at ingest, each embedded as its
+  own dense unit (`<pid>#media#<n>`), linked to entities by name presence. Data-only
+  in Phase 1 — retrieval through media nodes is a later phase. See
+  `docs/design/multimodal-graph.md`.
 - Fuzzy canonicalization at threshold **95** (raised from 90 for cross-domain safety).
 - Reconciler requires **≥ 2 entity overlaps** before considering a page affected (single-entity coincidences ignored).
 - 2-hop expansion at retrieval time.

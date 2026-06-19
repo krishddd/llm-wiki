@@ -13,6 +13,9 @@ log = logging.getLogger(__name__)
 
 ENTITY_TYPES = {"PERSON", "ORG", "CONCEPT", "PLACE", "EVENT"}
 RELATION_TYPES = {"RELATES_TO", "PART_OF", "CONTRADICTS", "SUPPORTS", "AUTHORED_BY", "OCCURRED_IN"}
+# Multimodal-graph (Phase 1): modality node kinds + media→entity edge types.
+MEDIA_KINDS = {"table", "image", "code", "formula"}
+MEDIA_REL_TYPES = {"DEPICTS", "MEASURES", "DEFINES", "REFERENCES"}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS entities (
@@ -65,6 +68,28 @@ CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
 CREATE INDEX IF NOT EXISTS idx_entities_canon ON entities(canonical_id);
 CREATE INDEX IF NOT EXISTS idx_pe_entity ON page_entities(entity_id);
 CREATE INDEX IF NOT EXISTS idx_relations_active ON relations(src, dst, valid_to);
+
+-- Multimodal graph (Phase 1): modality units (table/image/code/formula) as
+-- first-class nodes, plus media↔entity edges. Additive — no impact on existing tiers.
+CREATE TABLE IF NOT EXISTS media_nodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_id TEXT NOT NULL,
+    kind TEXT NOT NULL,            -- table | image | code | formula
+    ordinal INTEGER,              -- position within the page (adjacency)
+    content TEXT NOT NULL,        -- table markdown / image caption+path / code / LaTeX
+    caption TEXT,                 -- nearby caption or llava description
+    embedding_id TEXT,            -- dense-index id, e.g. "<pid>#media#<n>"
+    bbox TEXT,                    -- optional PDF spatial info
+    ingested_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_media_page ON media_nodes(page_id);
+CREATE TABLE IF NOT EXISTS media_entities (
+    media_id  INTEGER NOT NULL,
+    entity_id INTEGER NOT NULL,
+    rel_type  TEXT DEFAULT 'DEPICTS',   -- DEPICTS | MEASURES | DEFINES | REFERENCES
+    PRIMARY KEY (media_id, entity_id)
+);
+CREATE INDEX IF NOT EXISTS idx_me_entity ON media_entities(entity_id);
 """
 
 
@@ -277,6 +302,117 @@ class KnowledgeGraph:
                 list(ids) + list(ids) + [limit],
             )
             return [str(r[0]) for r in cur.fetchall()]
+
+    # ─────────────────────────────────────────────────────────────────
+    # Multimodal graph API (Phase 1) — modality nodes + media↔entity edges
+    # ─────────────────────────────────────────────────────────────────
+
+    async def add_media_node(
+        self,
+        *,
+        page_id: str,
+        kind: str,
+        content: str,
+        caption: str | None = None,
+        ordinal: int | None = None,
+        embedding_id: str | None = None,
+        bbox: str | None = None,
+    ) -> int:
+        """Insert a modality unit (table/image/code/formula). Returns its id.
+
+        Idempotent per (page_id, ordinal, kind): re-ingesting a page replaces rather
+        than duplicates its media nodes — callers should delete_media_for_page first
+        for a clean rebuild, but we also guard against exact-dup ordinals here.
+        """
+        if kind not in MEDIA_KINDS:
+            raise ValueError(f"unknown media kind: {kind!r}")
+        async with self._lock:
+            cur = self._conn.cursor()
+            cur.execute(
+                "INSERT INTO media_nodes(page_id, kind, ordinal, content, caption, embedding_id, bbox) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (page_id, kind, ordinal, content, caption, embedding_id, bbox),
+            )
+            mid = int(cur.lastrowid)
+            self._conn.commit()
+            return mid
+
+    async def link_media_entity(
+        self,
+        *,
+        media_id: int,
+        entity_name: str,
+        entity_type: str,
+        rel_type: str = "DEPICTS",
+    ) -> None:
+        """Link a media node to a (canonicalised) entity. Unknown rel_type → DEPICTS."""
+        t = entity_type.upper()
+        if t not in ENTITY_TYPES:
+            return
+        rt = rel_type.upper() if rel_type.upper() in MEDIA_REL_TYPES else "DEPICTS"
+        async with self._lock:
+            eid = self._canonicalize(entity_name.strip(), t)
+            self._conn.execute(
+                "INSERT OR IGNORE INTO media_entities(media_id, entity_id, rel_type) VALUES (?, ?, ?)",
+                (media_id, eid, rt),
+            )
+            self._conn.commit()
+
+    async def delete_media_for_page(self, page_id: str) -> None:
+        """Remove a page's media nodes + their edges (for clean re-ingest)."""
+        async with self._lock:
+            cur = self._conn.cursor()
+            cur.execute("SELECT id FROM media_nodes WHERE page_id = ?", (page_id,))
+            ids = [int(r[0]) for r in cur.fetchall()]
+            if ids:
+                qs = ",".join(["?"] * len(ids))
+                cur.execute(f"DELETE FROM media_entities WHERE media_id IN ({qs})", ids)
+            cur.execute("DELETE FROM media_nodes WHERE page_id = ?", (page_id,))
+            self._conn.commit()
+
+    async def media_for_page(self, page_id: str) -> list[dict]:
+        """All media nodes for a page, ordered by position."""
+        async with self._lock:
+            cur = self._conn.cursor()
+            cur.execute(
+                "SELECT id, kind, ordinal, content, caption, embedding_id FROM media_nodes "
+                "WHERE page_id = ? ORDER BY COALESCE(ordinal, 0)",
+                (page_id,),
+            )
+            return [
+                {"id": r[0], "kind": r[1], "ordinal": r[2], "content": r[3],
+                 "caption": r[4], "embedding_id": r[5], "page_id": page_id}
+                for r in cur.fetchall()
+            ]
+
+    async def media_for_entity(self, name: str, limit: int = 10) -> list[dict]:
+        """Media nodes linked to an entity matching `name` (canonical-aware).
+
+        This is the edge Phase 2 retrieval traverses: ask about an entity, surface
+        the tables/figures that measure or depict it even if their text didn't match.
+        """
+        async with self._lock:
+            cur = self._conn.cursor()
+            cur.execute("SELECT id, canonical_id FROM entities WHERE LOWER(name) = LOWER(?)", (name,))
+            rows = cur.fetchall()
+            if not rows:
+                return []
+            ids: set[int] = set()
+            for rid, canon in rows:
+                ids.add(int(canon if canon is not None else rid))
+            qs = ",".join(["?"] * len(ids))
+            cur.execute(
+                f"SELECT DISTINCT m.id, m.page_id, m.kind, m.content, m.caption, me.rel_type "
+                f"FROM media_nodes m JOIN media_entities me ON m.id = me.media_id "
+                f"JOIN entities e ON me.entity_id = e.id "
+                f"WHERE e.id IN ({qs}) OR e.canonical_id IN ({qs}) LIMIT ?",
+                list(ids) + list(ids) + [limit],
+            )
+            return [
+                {"id": r[0], "page_id": r[1], "kind": r[2], "content": r[3],
+                 "caption": r[4], "rel_type": r[5]}
+                for r in cur.fetchall()
+            ]
 
     # ─────────────────────────────────────────────────────────────────
     # Bi-temporal facts API (Graphiti / Zep pattern, 2026)
