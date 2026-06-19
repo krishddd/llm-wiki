@@ -563,6 +563,31 @@ class Ingestor:
             log.exception("load failed")
             return IngestResult(source=str(src), page_path="", confidence=0.0, is_live=False, title=title, error=str(e))
 
+        # Privacy redaction — strip secrets/PII from raw text BEFORE it reaches the
+        # summariser, claim extractor, graph, embeddings, or the on-disk page.
+        if self.s.ingest_redact_secrets:
+            from .privacy import redact_text
+            redaction_counts: dict[str, int] = {}
+            for el in elements:
+                if el.kind in ("text", "heading", "table", "code") and el.content:
+                    res = redact_text(el.content, redact_emails=self.s.ingest_redact_emails)
+                    if res.redacted:
+                        el.content = res.text
+                        for cat, n in res.counts.items():
+                            redaction_counts[cat] = redaction_counts.get(cat, 0) + n
+            if redaction_counts:
+                log.warning(
+                    "privacy redaction applied",
+                    extra={"metadata": {"source": str(src), "counts": redaction_counts}},
+                )
+                try:
+                    audit(
+                        log, "PRIVACY_REDACT", str(src),
+                        total=sum(redaction_counts.values()), counts=redaction_counts,
+                    )
+                except Exception as e:
+                    log.debug("redaction audit failed", extra={"metadata": {"error": str(e)[:120]}})
+
         # Optional llava captions for image elements (in-place mutation).
         try:
             await self._caption_images(elements)

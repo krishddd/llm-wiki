@@ -164,6 +164,7 @@ is the stored value × Ebbinghaus decay; computed on read.
 
 ```
 load_elements (multi-format)
+  → privacy redaction (strip API keys / JWTs / private keys / passwords)  [PRIVACY_REDACT]
   → layout_aware_chunks (atomic tables/images)
   → gemma summarise per chunk + extract entities/relations
   → qwen merge (3-tier fallback) + score confidence
@@ -251,16 +252,21 @@ Manual: `POST /admin/run/{job_name}` runs any registered job once.
   3. **Auto-resolver** (Phase E2): when a contradiction is detected with composite score margin ≥ 0.2.
 - Below the margin → leave both active, surface in `GET /admin/contradictions` for human review.
 
-## Privacy filtering (policy — implementation deferred)
+## Privacy filtering (implemented — `src/privacy.py`)
 
-Sources may contain PII / credentials. Apply BEFORE ingest:
-- Strip API keys (`sk-...`, `ghp_...`, `xoxb-...`, etc.).
-- Strip access tokens, JWTs.
-- Strip plaintext passwords.
-- Strip private email addresses unless they are public (e.g. paper authors).
-- Audit-log every redaction with `PRIVACY_REDACT` event.
+Implemented in `src/privacy.py`. `redact_text()` is applied to raw element text in
+`ingest_file()` BEFORE it reaches the summariser / claims / graph / embeddings /
+on-disk page. Each secret becomes a typed `[REDACTED:<cat>]` placeholder so prose
+stays coherent.
+- Strips API keys (`sk-...`, `ghp_...`, `xox[baprs]-...`, `AKIA...`, `AIza...`, GitLab PATs).
+- Strips JWTs (`eyJ…`) and PEM private-key blocks.
+- Strips plaintext passwords in `password: …` / `pwd=…` form (field name preserved).
+- Emails are PII but public author emails are legitimate content → opt-in via
+  `INGEST_REDACT_EMAILS` (default off).
+- Audit-logs every redaction with a `PRIVACY_REDACT` event carrying per-category counts.
 
-This is a documented policy; the redactor module is deferred to a future workstream.
+Toggles: `INGEST_REDACT_SECRETS` (default on), `INGEST_REDACT_EMAILS` (default off).
+Conservative by design — high-precision patterns only, to avoid corrupting prose.
 
 ---
 

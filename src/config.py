@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     # retrieval/routing can reason about subject matter. One heuristic check per page.
     ingest_domain_tagging: bool = True
 
+    # Privacy / secret redaction — strip API keys, JWTs, private keys and plaintext
+    # passwords from raw source text BEFORE it reaches the summariser / claims / graph /
+    # embeddings / on-disk page. Audit-logged as PRIVACY_REDACT. (CLAUDE.md policy.)
+    ingest_redact_secrets: bool = True
+    # Emails are PII but public author emails are legitimate content — opt-in only.
+    ingest_redact_emails: bool = False
+
     # Adaptive retrieval — classify question intent (factual / multi_hop /
     # synthesis / exhaustive) and pick top_k + full_page_mode + graph_expand
     # accordingly. Heuristic first, gemma fallback on ambiguous cases.
