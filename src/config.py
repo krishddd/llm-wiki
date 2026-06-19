@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     model_summary: str = "gemma4:e4b"
     model_fast: str = "qwen3:14b"
     model_vision: str = "llava:7b"
+    # Reasoning specialist (VibeThinker — AIME-class maths / STEM / code). Used for
+    # the *adaptive routing* path only: quantitative questions reason here, then qwen
+    # formats + cites the result. Empty string disables routing entirely.
+    # Serve via Ollama (GGUF) or a vLLM sidecar; recommended sampler temp≈0.6 top_p≈0.95.
+    model_solver: str = "vibethinker:3b"
 
     confidence_threshold: float = 0.60
     pdf_chunk_pages: int = 3
@@ -50,6 +55,19 @@ class Settings(BaseSettings):
     # RAG-Fusion / multi-query — generates 2-3 paraphrases of each (sub-)query
     # and RRF-fuses results. One extra qwen call per query.
     query_multi_query: bool = True
+
+    # Adaptive model routing — detect quantitative/STEM questions (maths, economics,
+    # science, engineering/industrial materials) and route the *reasoning* to
+    # `model_solver` (VibeThinker), then let qwen format + cite. Self-disables if
+    # `model_solver` is empty or not installed (falls back to qwen synthesis).
+    route_solver_enabled: bool = True
+    # Allow a gemma LLM fallback for domain detection when regex signals are absent.
+    route_solver_llm_fallback: bool = False
+    # VibeThinker sampler — authors recommend temperature 0.6, top_p 0.95.
+    solver_temperature: float = 0.6
+    # Domain tagging at ingest — stamp pages with a `domain:` frontmatter field so
+    # retrieval/routing can reason about subject matter. One heuristic check per page.
+    ingest_domain_tagging: bool = True
 
     # Adaptive retrieval — classify question intent (factual / multi_hop /
     # synthesis / exhaustive) and pick top_k + full_page_mode + graph_expand

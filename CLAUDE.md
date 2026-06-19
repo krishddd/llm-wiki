@@ -13,11 +13,36 @@
 |------|-------|-----------|
 | Summarise, extract | `gemma4:e4b` | Fast, strong instruction-following |
 | Reason, route, lint, claims | `qwen3:14b` | Deep reasoning, thinking mode |
+| **Quantitative reasoning specialist** | `vibethinker:3b` | AIME-class maths / STEM / code; routed to ADAPTIVELY for quantitative questions |
 | Embeddings | `nomic-embed-text:latest` | 274 MB, MTEB-strong |
 | Vision (image captions) | `llava:7b` | Optional — used when ingest_caption_images=true |
 
 All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`).
 `MODEL_FAST = MODEL_REASON` is intentional — disables a missing-llama3.2 fallback.
+
+### Adaptive model routing (VibeThinker)
+
+`model_solver` (default `vibethinker:3b`, [WeiboAI/VibeThinker](https://github.com/WeiboAI/VibeThinker))
+is a tiny reasoning specialist: world-class on competition maths / STEM / code, but
+**weak on broad knowledge** (the authors say so). So it is NOT a general synthesizer
+replacement — it is routed to ONLY for quantitative questions via a **reason→format**
+two-stage:
+
+1. `src/search/domain.py` detects the cognition required (general / math / science /
+   economics / engineering) by heuristic regex over the question + retrieved context.
+2. If quantitative (`needs_solver()` True) and `route_solver_enabled`, VibeThinker
+   does the step-by-step derivation (`OllamaClient.solver()`, temp 0.6, top_p 0.95).
+   Its `<think>…</think>` trace is stripped (`strip_think()`).
+3. `qwen3:14b` then formats + cites that verified reasoning into the standard
+   JSON/citation schema — so grounding, per-claim confidence and save-back are unchanged.
+
+Any solver failure (model not installed, timeout) silently falls back to qwen-only
+synthesis. `QueryResult.reasoner` records `"qwen"` or `"solver"`.
+
+**Serving:** VibeThinker ships for vLLM / SGLang / transformers. To use it in this
+Ollama stack, either pull a GGUF quant (`ollama create vibethinker:3b -f Modelfile`
+with `temperature 0.6`, `top_p 0.95`, `num_ctx 40960`) or run a vLLM sidecar. Set
+`model_solver=""` to disable routing entirely.
 
 ---
 
@@ -111,6 +136,7 @@ source: "wiki/raw/file.pdf" | "query-save-back" | "episodic-promotion" | "sessio
 ingested: 2026-05-01
 confidence: 0.87
 confidence_reason: "..."
+domain: general | math | science | economics | engineering   # stamped at ingest; drives adaptive routing
 tags: [concept, person, org]
 entity_refs: ["Entity A", "Entity B"]
 context_preamble: "..."     # Anthropic Contextual Retrieval — short doc context
@@ -165,6 +191,8 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
   → hybrid retrieval (BM25 + dense → RRF → FlashRank → graph 2-hop → MMR)
   → mark_accessed() on retrieved pages              [v2 — Phase B3]
   → CRAG relevance filter (drop off-topic)
+  → adaptive model routing: if quantitative (maths/econ/science/eng),     [VibeThinker]
+       VibeThinker reasons step-by-step → qwen formats + cites the result
   → synthesis (numbered citations, [Page]^conf markers, blocks)
   → grounding check + CRAG ceiling
   → reflection critique → optional refinement

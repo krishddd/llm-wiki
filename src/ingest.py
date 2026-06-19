@@ -655,6 +655,13 @@ class Ingestor:
         entity_refs = [e.name for e in entities][:50]
         has_tables = any(el.kind == "table" for el in elements)
         has_images = any(el.kind == "image" for el in elements)
+        # Domain tag — stamp the page's subject (general / math / science / economics /
+        # engineering) so retrieval + adaptive model routing can reason about it. One
+        # cheap heuristic check against the title + summary.
+        domain = "general"
+        if self.s.ingest_domain_tagging:
+            from .search.domain import heuristic_domain
+            domain = heuristic_domain(f"{title}\n{summary or ''}") or "general"
         frontmatter = {
             "title": title,
             "source": str(src).replace("\\", "/"),
@@ -662,6 +669,7 @@ class Ingestor:
             "source_count": 1,
             "confidence": round(confidence, 2),
             "confidence_reason": reason[:300],
+            "domain": domain,
             "tags": sorted({e.type.lower() for e in entities}),
             "entity_refs": entity_refs,
             "has_tables": has_tables,
