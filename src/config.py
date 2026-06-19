@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     # 4-model stack. model_fast == model_reason so the qwen-timeout fallback path
     # is a no-op (we do NOT have llama3.2 installed; see llm.qwen()).
     model_embed: str = "nomic-embed-text:latest"
+    # Domain-specialized embedding — a stronger embedder for STEM / notation-heavy
+    # content (maths, science, economics, engineering), where the small general model
+    # loses recall. When `embed_stem_enabled`, quantitative pages are ALSO indexed into
+    # a separate STEM dense collection and quantitative queries are routed to it.
+    # Off by default (needs the model pulled + an index rebuild). bge-m3 is a strong,
+    # Ollama-available default; swap for any embedder you prefer.
+    model_embed_stem: str = "bge-m3"
+    embed_stem_enabled: bool = False
     model_reason: str = "qwen3:14b"
     model_summary: str = "gemma4:e4b"
     model_fast: str = "qwen3:14b"

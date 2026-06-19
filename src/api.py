@@ -79,7 +79,22 @@ async def _startup() -> None:
 
     client = get_client()
     state.bm25 = BM25Index(s.data_dir / "bm25.pkl")
-    state.dense = DenseIndex(s.data_dir / "chroma", embed_fn=client.embed)
+    _general_dense = DenseIndex(s.data_dir / "chroma", embed_fn=client.embed)
+    if s.embed_stem_enabled and s.model_embed_stem:
+        # Domain-specialized STEM index — own collection (separate embedding space),
+        # embedded with model_embed_stem. Routed by query/page domain.
+        from .search.dense_router import DomainRoutedDenseIndex
+
+        async def _stem_embed(text: str) -> list[float]:
+            return await client.embed(text, model=s.model_embed_stem)
+
+        _stem_dense = DenseIndex(
+            s.data_dir / "chroma_stem", embed_fn=_stem_embed, collection="wiki_pages_stem"
+        )
+        state.dense = DomainRoutedDenseIndex(general=_general_dense, stem=_stem_dense)
+        log.info("STEM dense routing enabled", extra={"metadata": {"model": s.model_embed_stem}})
+    else:
+        state.dense = _general_dense
     state.graph = KnowledgeGraph(s.data_dir / "graph.db")
     state.page_store = PageStore(s.wiki_dir)
     state.ingestor = Ingestor(client=client, graph=state.graph, bm25=state.bm25, dense=state.dense)

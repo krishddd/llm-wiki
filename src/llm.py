@@ -153,13 +153,15 @@ class OllamaClient:
         img_b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
         return await self._chat(self.settings.model_vision, prompt, None, images=[img_b64])
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str, *, model: str | None = None) -> list[float]:
+        # `model` overrides the default embedder (used by the STEM-routed dense index).
+        embed_model = model or self.settings.model_embed
         # Cache key = (model, text) — bounded FIFO eviction.
-        key = f"{self.settings.model_embed}::{text}"
+        key = f"{embed_model}::{text}"
         cached = self._embed_cache.get(key)
         if cached is not None:
             return cached
-        payload = {"model": self.settings.model_embed, "prompt": text}
+        payload = {"model": embed_model, "prompt": text}
         try:
             r = await self._client.post(
                 f"{self.settings.ollama_host}/api/embeddings", json=payload, timeout=self.settings.llm_timeout

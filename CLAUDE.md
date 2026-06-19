@@ -15,6 +15,7 @@
 | Reason, route, lint, claims | `qwen3:14b` | Deep reasoning, thinking mode |
 | **Quantitative reasoning specialist** | `vibethinker:3b` | AIME-class maths / STEM / code; routed to ADAPTIVELY for quantitative questions |
 | Embeddings | `nomic-embed-text:latest` | 274 MB, MTEB-strong |
+| STEM embeddings (optional) | `bge-m3` | Domain-routed embedder for maths/science/econ/eng; enable with `EMBED_STEM_ENABLED` |
 | Vision (image captions) | `llava:7b` | Optional — used when ingest_caption_images=true |
 
 All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`).
@@ -43,6 +44,20 @@ synthesis. `QueryResult.reasoner` records `"qwen"` or `"solver"`.
 Ollama stack, either pull a GGUF quant (`ollama create vibethinker:3b -f Modelfile`
 with `temperature 0.6`, `top_p 0.95`, `num_ctx 40960`) or run a vLLM sidecar. Set
 `model_solver=""` to disable routing entirely.
+
+### Domain-specialized STEM embeddings (optional)
+
+`model_embed_stem` (default `bge-m3`, off unless `EMBED_STEM_ENABLED=true`) is a
+stronger embedder for notation-heavy content. When enabled, `DomainRoutedDenseIndex`
+(`src/search/dense_router.py`) keeps a **separate** STEM dense collection
+(`chroma_stem`) — two embedders mean two incompatible vector spaces, so they cannot
+share one collection. Routing: quantitative pages (domain ∈ {math, science, economics,
+engineering}) are indexed into BOTH general and STEM collections; quantitative queries
+are served by the STEM collection (each index embeds the query with its own model, so
+spaces stay consistent). `hybrid_search` calls `route_search()` when present; a plain
+`DenseIndex` is unchanged. Disabled = transparent passthrough to the general index.
+Enabling requires `ollama pull bge-m3` and re-ingesting (or rebuilding) to populate
+the STEM collection.
 
 ---
 

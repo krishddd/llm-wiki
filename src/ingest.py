@@ -542,7 +542,8 @@ class Ingestor:
                         meta={
                             "title": title,
                             "confidence": frontmatter.get("confidence", 0.6),
-                            "parent_id": pid
+                            "parent_id": pid,
+                            "domain": frontmatter.get("domain", "general"),
                         }
                     )
                 except Exception as e:
