@@ -218,6 +218,7 @@ class QueryResponse(BaseModel):
     quality_score: float = 1.0           # reflection critique 0-1
     quality_issues: list[str] = []
     per_claim_confidences: list[dict] = []   # [{"citation": "...", "confidence": 0.92}, ...]
+    related_media: list[dict] = []           # multimodal-graph nodes linked to retrieved entities
 
 
 # ───── Endpoints ─────
@@ -355,6 +356,7 @@ async def query(body: QueryBody) -> QueryResponse:
         quality_score=getattr(result, "quality_score", 1.0),
         quality_issues=getattr(result, "quality_issues", []) or [],
         per_claim_confidences=getattr(result, "per_claim_confidences", []) or [],
+        related_media=getattr(result, "related_media", []) or [],
         saved_page=getattr(result, "saved_page", None),
     )
 

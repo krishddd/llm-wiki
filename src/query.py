@@ -144,6 +144,7 @@ class QueryResult:
     quality_score: float = 1.0
     quality_issues: list[str] = field(default_factory=list)
     per_claim_confidences: list[dict] = field(default_factory=list)
+    related_media: list[dict] = field(default_factory=list)
 
 
 def _extract_json(s: str) -> dict | None:
@@ -560,12 +561,40 @@ class QueryEngine:
         if active_facts:
             fact_context = "\n\nCANONICAL GRAPH FACTS (VERIFIED ACTIVE TRUTH — CITE THESE WHEN POSSIBLE):\n" + "\n".join(active_facts)
 
+        # Multimodal graph (Phase 2): surface tables / figures / code linked to the
+        # entities in the retrieved set — even when their own page wasn't top-ranked.
+        # This is the 2-hop media expansion the Phase 1 media_entities edges enable.
+        media_context = ""
+        related_media: list[dict] = []
+        if self.s.graph_multimodal_nodes and self.graph and hasattr(self.graph, "media_for_entity"):
+            seen_media: set[int] = set()
+            for ent in entities_to_query[:15]:
+                try:
+                    media = await self.graph.media_for_entity(ent, limit=3)
+                except Exception as e:
+                    log.debug("media_for_entity failed", extra={"metadata": {"entity": ent, "error": str(e)[:120]}})
+                    continue
+                for m in media:
+                    if m["id"] not in seen_media:
+                        seen_media.add(m["id"])
+                        related_media.append(m)
+            if related_media:
+                lines = [
+                    f"[{m['kind'].upper()} from {m['page_id']} — linked via {m.get('rel_type', 'DEPICTS')}]\n"
+                    f"{(m.get('content') or '')[:1000]}"
+                    for m in related_media[:6]
+                ]
+                media_context = (
+                    "\n\nRELATED MEDIA (tables/figures/code linked to the entities above — "
+                    "reproduce a relevant table verbatim and cite its page):\n" + "\n\n".join(lines)
+                )
+
         # 4a) Adaptive model routing. Quantitative / STEM questions (maths, economics,
         # science, engineering / industrial materials) are REASONED by the specialist
         # solver (VibeThinker); qwen then formats + cites that reasoning. Plain-English
         # questions skip the solver and go straight to qwen synthesis. Any solver
         # failure (model not installed, timeout) silently falls back to qwen-only.
-        prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}"
+        prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}{media_context}"
         reasoner_used = "qwen"
         if (
             self.s.route_solver_enabled
@@ -586,7 +615,7 @@ class QueryEngine:
                         f"VERIFIED EXPERT REASONING (treat as a trusted working — preserve its "
                         f"numbers, formulas and final result; your job is to format and cite it "
                         f"against the wiki pages):\n{reasoning[:6000]}\n\n"
-                        f"WIKI PAGES:\n{ctx}{fact_context}"
+                        f"WIKI PAGES:\n{ctx}{fact_context}{media_context}"
                     )
             except Exception as e:
                 log.warning(
@@ -754,4 +783,5 @@ class QueryEngine:
                 {"citation": c.citation_token, "confidence": round(c.confidence, 3)}
                 for c in per_claim
             ],
+            related_media=related_media,
         )

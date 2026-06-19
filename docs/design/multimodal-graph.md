@@ -1,8 +1,10 @@
 # Design Proposal: Unified Multimodal Knowledge Graph
 
-> Status: **Phase 1 implemented** (schema + ingest population + per-media embedding,
-> data-only, flag-gated `graph_multimodal_nodes`). Phases 2–3 (retrieval rewiring,
-> spatial/formula edges) remain proposed.
+> Status: **Phases 1–2 implemented.** Phase 1 = schema + ingest population +
+> per-media embedding (data-only). Phase 2 = retrieval surfaces media linked to
+> retrieved entities (2-hop media expansion) into synthesis + `related_media` in the
+> response. Both flag-gated by `graph_multimodal_nodes`. Phase 3 (spatial `NEAR`
+> edges, true image embeddings) remains proposed.
 > Author: agent-assisted. Companion to `CLAUDE.md` (schema authority).
 > Scope: make tables / images / code / formulas first-class graph nodes, linked to
 > the entities and pages they belong to, retrievable on their own.

@@ -218,6 +218,8 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
   → CRAG relevance filter (drop off-topic)
   → adaptive model routing: if quantitative (maths/econ/science/eng),     [VibeThinker]
        VibeThinker reasons step-by-step → qwen formats + cites the result
+  → multimodal expansion: surface media nodes linked to retrieved        [GRAPH_MULTIMODAL_NODES]
+       entities (tables/figures/code) into context + related_media
   → synthesis (numbered citations, [Page]^conf markers, blocks)
   → grounding check + CRAG ceiling
   → reflection critique → optional refinement

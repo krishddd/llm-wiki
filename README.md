@@ -58,6 +58,12 @@ file (PDF/DOCX/PPTX/XLSX/HTML/MD/TXT)
 load_elements                     ← multi-format loaders, structure-aware
    │
    ▼
+privacy redaction                 ← strip API keys / JWTs / private keys / passwords
+   │
+   ▼
+agentic ingest plan               ← adaptive chunk size/overlap by content density
+   │
+   ▼
 layout_aware_chunks               ← atomic tables / images, semantic blocks
    │
    ▼
@@ -93,6 +99,9 @@ contradiction detection vs related pages
    ▼
 reconciler — edits pre-existing pages that overlap on ≥ 2 entities
    │  refines, contradicts, or adds context; staged in wiki/review/edits/
+   │
+   ▼
+media nodes (multimodal graph)    ← tables/images/code/formulas → graph + own embeddings
    │
    ▼
 rebuild_index + rebuild_entity_pages
@@ -138,6 +147,12 @@ mark_accessed() on every retrieved page → reinforces lifecycle counter
 CRAG relevance filter             ← drop off-topic candidates
    │
    ▼
+adaptive model routing            ← quantitative Q → VibeThinker reasons, qwen formats
+   │
+   ▼
+multimodal expansion              ← surface tables/figures linked to retrieved entities
+   │
+   ▼
 synthesis
    ├─ numbered citations
    ├─ [Page]^conf markers per claim
@@ -158,6 +173,28 @@ save-back if confidence ≥ 0.80 ∧ citations ≥ 2
    ▼
 episodic_log_entry
 ```
+
+---
+
+## 2026 adaptive upgrades
+
+Beyond the base pipeline, the system adapts to *what kind* of content and question
+it is handling. Each upgrade is flag-gated and degrades gracefully when its model
+isn't installed.
+
+| Upgrade | What it does | Flag (default) |
+|---|---|---|
+| **Adaptive model routing** | Quantitative questions (maths, economics, science, engineering) are reasoned by [VibeThinker](https://github.com/WeiboAI/VibeThinker) — a maths/STEM specialist — then qwen formats + cites the result. Plain-English questions skip it. | `ROUTE_SOLVER_ENABLED` (on; self-disables if `MODEL_SOLVER` not served) |
+| **Domain detection + tagging** | Every page and query is classified general / math / science / economics / engineering, driving routing and retrieval. | always on |
+| **Agentic retrieval** | The `/query` front door auto-routes simple questions to a fast single pass and complex ones to an iterative plan → retrieve → sufficiency-check → gap-rewrite loop. | `AGENTIC_ENABLED` (on) |
+| **Agentic ingestion** | Per-document adaptive chunk sizing — dense technical content gets smaller chunks, narrative prose larger. | `INGEST_AGENTIC_PLANNING` (on) |
+| **Privacy redaction** | Strips API keys, JWTs, private keys, and passwords from raw sources before ingest; audit-logged as `PRIVACY_REDACT`. | `INGEST_REDACT_SECRETS` (on) |
+| **STEM embeddings** | A stronger, notation-aware embedder (`bge-m3`) in a separate dense collection for quantitative content; routed by domain. | `EMBED_STEM_ENABLED` (off) |
+| **Multimodal graph** | Tables/images/code/formulas become first-class graph nodes linked to entities and embedded as their own units; retrieval surfaces media linked to the entities in play. | `GRAPH_MULTIMODAL_NODES` (off) |
+
+See [`CLAUDE.md`](./CLAUDE.md) for the schema details and
+[`docs/design/multimodal-graph.md`](./docs/design/multimodal-graph.md) for the
+multimodal-graph rollout.
 
 ---
 
