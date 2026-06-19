@@ -595,9 +595,30 @@ class Ingestor:
         except Exception as e:
             log.debug("caption pass failed", extra={"metadata": {"error": str(e)[:120]}})
 
+        # Agentic ingestion — pick adaptive chunk params from document structure +
+        # content density (dense technical → smaller chunks; narrative → larger).
+        chunk_target, chunk_overlap = 6000, self.s.ingest_overlap
+        ingest_plan = None
+        if self.s.ingest_agentic_planning:
+            from .agentic_ingest import plan_ingest
+            ingest_plan = plan_ingest(
+                elements, default_target=6000, default_overlap=self.s.ingest_overlap
+            )
+            if self.s.ingest_planning_llm:
+                from .agentic_ingest import plan_ingest_llm
+                ingest_plan = await plan_ingest_llm(self.c, elements, ingest_plan)
+            chunk_target, chunk_overlap = ingest_plan.target_chars, ingest_plan.overlap_chars
+            log.info(
+                "agentic ingest plan",
+                extra={"metadata": {
+                    "strategy": ingest_plan.strategy, "target_chars": chunk_target,
+                    "overlap_chars": chunk_overlap, "rationale": ingest_plan.rationale,
+                }},
+            )
+
         # Layout-aware chunking — tables and images stay atomic.
         chunks = layout_aware_chunks(
-            elements, target_chars=6000, overlap_chars=self.s.ingest_overlap
+            elements, target_chars=chunk_target, overlap_chars=chunk_overlap
         )
         if not chunks:
             # Defensive fallback — no structured elements extracted, flatten and chunk.
@@ -696,6 +717,7 @@ class Ingestor:
             "confidence": round(confidence, 2),
             "confidence_reason": reason[:300],
             "domain": domain,
+            "chunk_strategy": ingest_plan.strategy if ingest_plan else "fixed",
             "tags": sorted({e.type.lower() for e in entities}),
             "entity_refs": entity_refs,
             "has_tables": has_tables,

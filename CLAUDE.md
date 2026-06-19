@@ -152,6 +152,7 @@ ingested: 2026-05-01
 confidence: 0.87
 confidence_reason: "..."
 domain: general | math | science | economics | engineering   # stamped at ingest; drives adaptive routing
+chunk_strategy: dense | narrative | balanced | fixed          # agentic-ingestion chunk plan used
 tags: [concept, person, org]
 entity_refs: ["Entity A", "Entity B"]
 context_preamble: "..."     # Anthropic Contextual Retrieval — short doc context
@@ -180,7 +181,8 @@ is the stored value × Ebbinghaus decay; computed on read.
 ```
 load_elements (multi-format)
   → privacy redaction (strip API keys / JWTs / private keys / passwords)  [PRIVACY_REDACT]
-  → layout_aware_chunks (atomic tables/images)
+  → agentic plan: adaptive chunk size/overlap from structure + density   [agentic ingestion]
+  → layout_aware_chunks (atomic tables/images, plan-driven target/overlap)
   → gemma summarise per chunk + extract entities/relations
   → qwen merge (3-tier fallback) + score confidence
   → extraction-signal floor (rich → bumps confidence)
@@ -266,6 +268,20 @@ Manual: `POST /admin/run/{job_name}` runs any registered job once.
   2. **Contradiction detector**: when `_detect_contradictions` returns a concrete claim excerpt.
   3. **Auto-resolver** (Phase E2): when a contradiction is detected with composite score margin ≥ 0.2.
 - Below the margin → leave both active, surface in `GET /admin/contradictions` for human review.
+
+## Agentic ingestion (implemented — `src/agentic_ingest.py`)
+
+`plan_ingest()` inspects each document's structure (element kinds/counts, structural
+density, text length) and a content sample, then picks an adaptive chunk plan instead
+of the fixed 6000-char target:
+- **dense** (STEM domain, formulas, or ≥4 tables/code blocks) → ~3000 chars + ~10%
+  overlap, so notation/tables stay with their explanation.
+- **narrative** (long prose, low density) → ~7500 chars + ~2% overlap.
+- **balanced** → existing defaults.
+
+Heuristic-first (on by default, zero LLM cost). Optional gemma refinement via
+`INGEST_PLANNING_LLM` (one extra call per doc). All sizes clamped to [1500, 9000] /
+[80, 600]. The chosen strategy is recorded in frontmatter as `chunk_strategy`.
 
 ## Privacy filtering (implemented — `src/privacy.py`)
 

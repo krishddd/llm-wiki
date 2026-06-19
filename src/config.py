@@ -77,6 +77,13 @@ class Settings(BaseSettings):
     # retrieval/routing can reason about subject matter. One heuristic check per page.
     ingest_domain_tagging: bool = True
 
+    # Agentic ingestion — inspect each document's structure + content density and pick
+    # adaptive chunk size/overlap (dense technical → smaller, narrative → larger) instead
+    # of a fixed 6000-char target. Heuristic is cheap and on by default; the gemma
+    # refinement (one extra call per doc) is opt-in.
+    ingest_agentic_planning: bool = True
+    ingest_planning_llm: bool = False
+
     # Privacy / secret redaction — strip API keys, JWTs, private keys and plaintext
     # passwords from raw source text BEFORE it reaches the summariser / claims / graph /
     # embeddings / on-disk page. Audit-logged as PRIVACY_REDACT. (CLAUDE.md policy.)
