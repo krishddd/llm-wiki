@@ -13,11 +13,51 @@
 |------|-------|-----------|
 | Summarise, extract | `gemma4:e4b` | Fast, strong instruction-following |
 | Reason, route, lint, claims | `qwen3:14b` | Deep reasoning, thinking mode |
+| **Quantitative reasoning specialist** | `vibethinker:3b` | AIME-class maths / STEM / code; routed to ADAPTIVELY for quantitative questions |
 | Embeddings | `nomic-embed-text:latest` | 274 MB, MTEB-strong |
+| STEM embeddings (optional) | `bge-m3` | Domain-routed embedder for maths/science/econ/eng; enable with `EMBED_STEM_ENABLED` |
 | Vision (image captions) | `llava:7b` | Optional — used when ingest_caption_images=true |
 
 All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`).
 `MODEL_FAST = MODEL_REASON` is intentional — disables a missing-llama3.2 fallback.
+
+### Adaptive model routing (VibeThinker)
+
+`model_solver` (default `vibethinker:3b`, [WeiboAI/VibeThinker](https://github.com/WeiboAI/VibeThinker))
+is a tiny reasoning specialist: world-class on competition maths / STEM / code, but
+**weak on broad knowledge** (the authors say so). So it is NOT a general synthesizer
+replacement — it is routed to ONLY for quantitative questions via a **reason→format**
+two-stage:
+
+1. `src/search/domain.py` detects the cognition required (general / math / science /
+   economics / engineering) by heuristic regex over the question + retrieved context.
+2. If quantitative (`needs_solver()` True) and `route_solver_enabled`, VibeThinker
+   does the step-by-step derivation (`OllamaClient.solver()`, temp 0.6, top_p 0.95).
+   Its `<think>…</think>` trace is stripped (`strip_think()`).
+3. `qwen3:14b` then formats + cites that verified reasoning into the standard
+   JSON/citation schema — so grounding, per-claim confidence and save-back are unchanged.
+
+Any solver failure (model not installed, timeout) silently falls back to qwen-only
+synthesis. `QueryResult.reasoner` records `"qwen"` or `"solver"`.
+
+**Serving:** VibeThinker ships for vLLM / SGLang / transformers. To use it in this
+Ollama stack, either pull a GGUF quant (`ollama create vibethinker:3b -f Modelfile`
+with `temperature 0.6`, `top_p 0.95`, `num_ctx 40960`) or run a vLLM sidecar. Set
+`model_solver=""` to disable routing entirely.
+
+### Domain-specialized STEM embeddings (optional)
+
+`model_embed_stem` (default `bge-m3`, off unless `EMBED_STEM_ENABLED=true`) is a
+stronger embedder for notation-heavy content. When enabled, `DomainRoutedDenseIndex`
+(`src/search/dense_router.py`) keeps a **separate** STEM dense collection
+(`chroma_stem`) — two embedders mean two incompatible vector spaces, so they cannot
+share one collection. Routing: quantitative pages (domain ∈ {math, science, economics,
+engineering}) are indexed into BOTH general and STEM collections; quantitative queries
+are served by the STEM collection (each index embeds the query with its own model, so
+spaces stay consistent). `hybrid_search` calls `route_search()` when present; a plain
+`DenseIndex` is unchanged. Disabled = transparent passthrough to the general index.
+Enabling requires `ollama pull bge-m3` and re-ingesting (or rebuilding) to populate
+the STEM collection.
 
 ---
 
@@ -111,6 +151,8 @@ source: "wiki/raw/file.pdf" | "query-save-back" | "episodic-promotion" | "sessio
 ingested: 2026-05-01
 confidence: 0.87
 confidence_reason: "..."
+domain: general | math | science | economics | engineering   # stamped at ingest; drives adaptive routing
+chunk_strategy: dense | narrative | balanced | fixed          # agentic-ingestion chunk plan used
 tags: [concept, person, org]
 entity_refs: ["Entity A", "Entity B"]
 context_preamble: "..."     # Anthropic Contextual Retrieval — short doc context
@@ -138,7 +180,9 @@ is the stored value × Ebbinghaus decay; computed on read.
 
 ```
 load_elements (multi-format)
-  → layout_aware_chunks (atomic tables/images)
+  → privacy redaction (strip API keys / JWTs / private keys / passwords)  [PRIVACY_REDACT]
+  → agentic plan: adaptive chunk size/overlap from structure + density   [agentic ingestion]
+  → layout_aware_chunks (atomic tables/images, plan-driven target/overlap)
   → gemma summarise per chunk + extract entities/relations
   → qwen merge (3-tier fallback) + score confidence
   → extraction-signal floor (rich → bumps confidence)
@@ -157,6 +201,13 @@ load_elements (multi-format)
 
 ### Query
 
+`POST /query` now enters through the **agentic orchestrator** (`agentic_rag/orchestrator.py`):
+it assesses question complexity and sends factual/simple queries to the fast single-pass
+path (zero overhead) while multi_hop/synthesis/exhaustive go through the iterative agentic
+loop (plan → fanout → sufficient-context check → gap rewriter → repeat). Request flag
+`agentic`: omit = auto-decide (default), `true` = force loop, `false` = force single-pass.
+Disable globally with `AGENTIC_ENABLED=false`. Both paths share the synthesis below.
+
 ```
 intent classifier (factual / multi_hop / synthesis / exhaustive)
   → decompose (compound)
@@ -165,6 +216,10 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
   → hybrid retrieval (BM25 + dense → RRF → FlashRank → graph 2-hop → MMR)
   → mark_accessed() on retrieved pages              [v2 — Phase B3]
   → CRAG relevance filter (drop off-topic)
+  → adaptive model routing: if quantitative (maths/econ/science/eng),     [VibeThinker]
+       VibeThinker reasons step-by-step → qwen formats + cites the result
+  → multimodal expansion: surface media nodes linked to retrieved        [GRAPH_MULTIMODAL_NODES]
+       entities (tables/figures/code) into context + related_media
   → synthesis (numbered citations, [Page]^conf markers, blocks)
   → grounding check + CRAG ceiling
   → reflection critique → optional refinement
@@ -216,16 +271,35 @@ Manual: `POST /admin/run/{job_name}` runs any registered job once.
   3. **Auto-resolver** (Phase E2): when a contradiction is detected with composite score margin ≥ 0.2.
 - Below the margin → leave both active, surface in `GET /admin/contradictions` for human review.
 
-## Privacy filtering (policy — implementation deferred)
+## Agentic ingestion (implemented — `src/agentic_ingest.py`)
 
-Sources may contain PII / credentials. Apply BEFORE ingest:
-- Strip API keys (`sk-...`, `ghp_...`, `xoxb-...`, etc.).
-- Strip access tokens, JWTs.
-- Strip plaintext passwords.
-- Strip private email addresses unless they are public (e.g. paper authors).
-- Audit-log every redaction with `PRIVACY_REDACT` event.
+`plan_ingest()` inspects each document's structure (element kinds/counts, structural
+density, text length) and a content sample, then picks an adaptive chunk plan instead
+of the fixed 6000-char target:
+- **dense** (STEM domain, formulas, or ≥4 tables/code blocks) → ~3000 chars + ~10%
+  overlap, so notation/tables stay with their explanation.
+- **narrative** (long prose, low density) → ~7500 chars + ~2% overlap.
+- **balanced** → existing defaults.
 
-This is a documented policy; the redactor module is deferred to a future workstream.
+Heuristic-first (on by default, zero LLM cost). Optional gemma refinement via
+`INGEST_PLANNING_LLM` (one extra call per doc). All sizes clamped to [1500, 9000] /
+[80, 600]. The chosen strategy is recorded in frontmatter as `chunk_strategy`.
+
+## Privacy filtering (implemented — `src/privacy.py`)
+
+Implemented in `src/privacy.py`. `redact_text()` is applied to raw element text in
+`ingest_file()` BEFORE it reaches the summariser / claims / graph / embeddings /
+on-disk page. Each secret becomes a typed `[REDACTED:<cat>]` placeholder so prose
+stays coherent.
+- Strips API keys (`sk-...`, `ghp_...`, `xox[baprs]-...`, `AKIA...`, `AIza...`, GitLab PATs).
+- Strips JWTs (`eyJ…`) and PEM private-key blocks.
+- Strips plaintext passwords in `password: …` / `pwd=…` form (field name preserved).
+- Emails are PII but public author emails are legitimate content → opt-in via
+  `INGEST_REDACT_EMAILS` (default off).
+- Audit-logs every redaction with a `PRIVACY_REDACT` event carrying per-category counts.
+
+Toggles: `INGEST_REDACT_SECRETS` (default on), `INGEST_REDACT_EMAILS` (default off).
+Conservative by design — high-precision patterns only, to avoid corrupting prose.
 
 ---
 
@@ -233,6 +307,12 @@ This is a documented policy; the redactor module is deferred to a future workstr
 
 - **Entity types**: `PERSON`, `ORG`, `CONCEPT`, `PLACE`, `EVENT`
 - **Relation types**: `RELATES_TO`, `PART_OF`, `CONTRADICTS`, `SUPPORTS`, `AUTHORED_BY`, `OCCURRED_IN`
+- **Media nodes** (multimodal graph Phase 1, `GRAPH_MULTIMODAL_NODES`, default off):
+  `media_nodes` (kinds `table|image|code|formula`) + `media_entities` edges
+  (`DEPICTS|MEASURES|DEFINES|REFERENCES`). Populated at ingest, each embedded as its
+  own dense unit (`<pid>#media#<n>`), linked to entities by name presence. Data-only
+  in Phase 1 — retrieval through media nodes is a later phase. See
+  `docs/design/multimodal-graph.md`.
 - Fuzzy canonicalization at threshold **95** (raised from 90 for cross-domain safety).
 - Reconciler requires **≥ 2 entity overlaps** before considering a page affected (single-entity coincidences ignored).
 - 2-hop expansion at retrieval time.

@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import logging
+import re
 from pathlib import Path
 
 import httpx
@@ -15,6 +16,28 @@ import httpx
 from .config import Settings, get_settings
 
 log = logging.getLogger(__name__)
+
+# Reasoning models (VibeThinker, qwen-thinking, DeepSeek-R1, …) emit an explicit
+# chain-of-thought before the final answer. Strip it so downstream JSON parsing /
+# formatting sees only the conclusion.
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def strip_think(text: str) -> str:
+    """Remove <think>…</think> reasoning traces; return the trailing answer."""
+    if not text:
+        return text
+    cleaned = _THINK_RE.sub("", text)
+    # Some models leave a dangling/unclosed <think> with no closing tag — keep only
+    # whatever follows the LAST opening tag in that case.
+    if "<think>" in cleaned.lower():
+        idx = cleaned.lower().rfind("</think>")
+        if idx != -1:
+            cleaned = cleaned[idx + len("</think>"):]
+        else:
+            parts = re.split(r"<think>", cleaned, flags=re.IGNORECASE)
+            cleaned = parts[-1]
+    return cleaned.strip()
 
 
 class OllamaError(RuntimeError):
@@ -112,17 +135,33 @@ class OllamaClient:
             self.settings.model_fast, prompt, system, temperature=temperature, timeout=self.settings.llm_fast_timeout
         )
 
+    async def solver(self, prompt: str, system: str | None = None, *, temperature: float | None = None) -> str:
+        """Reasoning specialist (VibeThinker). Returns the answer with any
+        <think> trace stripped. Caller is responsible for routing only quantitative
+        tasks here — VibeThinker is weak on broad-knowledge / recall.
+
+        Raises OllamaError if `model_solver` is unset or the model isn't served;
+        callers should catch and fall back to qwen synthesis.
+        """
+        if not self.settings.model_solver:
+            raise OllamaError("model_solver is not configured")
+        temp = self.settings.solver_temperature if temperature is None else temperature
+        raw = await self._chat(self.settings.model_solver, prompt, system, temperature=temp)
+        return strip_think(raw)
+
     async def llava(self, prompt: str, image_path: str | Path) -> str:
         img_b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
         return await self._chat(self.settings.model_vision, prompt, None, images=[img_b64])
 
-    async def embed(self, text: str) -> list[float]:
+    async def embed(self, text: str, *, model: str | None = None) -> list[float]:
+        # `model` overrides the default embedder (used by the STEM-routed dense index).
+        embed_model = model or self.settings.model_embed
         # Cache key = (model, text) — bounded FIFO eviction.
-        key = f"{self.settings.model_embed}::{text}"
+        key = f"{embed_model}::{text}"
         cached = self._embed_cache.get(key)
         if cached is not None:
             return cached
-        payload = {"model": self.settings.model_embed, "prompt": text}
+        payload = {"model": embed_model, "prompt": text}
         try:
             r = await self._client.post(
                 f"{self.settings.ollama_host}/api/embeddings", json=payload, timeout=self.settings.llm_timeout

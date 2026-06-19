@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
 
+# Cancel superseded runs on the same ref so a flurry of pushes doesn't queue up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
@@ -24,7 +29,18 @@ jobs:
       - name: Mypy (non-blocking)
         continue-on-error: true
         run: mypy src || true
-      - name: Unit tests (Ollama mocked, non-blocking)
+      - name: Unit tests — deterministic features (blocking)
+        # No Ollama/network needed; these gate the adaptive-pipeline features.
+        env:
+          OLLAMA_HOST: http://mock
+        run: |
+          pytest -q \
+            tests/test_domain_routing.py \
+            tests/test_privacy.py \
+            tests/test_dense_router.py \
+            tests/test_agentic_ingest.py \
+            tests/test_media_graph.py
+      - name: Unit tests — full suite (Ollama mocked, non-blocking)
         continue-on-error: true
         env:
           OLLAMA_HOST: http://mock

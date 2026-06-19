@@ -20,10 +20,23 @@ class Settings(BaseSettings):
     # 4-model stack. model_fast == model_reason so the qwen-timeout fallback path
     # is a no-op (we do NOT have llama3.2 installed; see llm.qwen()).
     model_embed: str = "nomic-embed-text:latest"
+    # Domain-specialized embedding — a stronger embedder for STEM / notation-heavy
+    # content (maths, science, economics, engineering), where the small general model
+    # loses recall. When `embed_stem_enabled`, quantitative pages are ALSO indexed into
+    # a separate STEM dense collection and quantitative queries are routed to it.
+    # Off by default (needs the model pulled + an index rebuild). bge-m3 is a strong,
+    # Ollama-available default; swap for any embedder you prefer.
+    model_embed_stem: str = "bge-m3"
+    embed_stem_enabled: bool = False
     model_reason: str = "qwen3:14b"
     model_summary: str = "gemma4:e4b"
     model_fast: str = "qwen3:14b"
     model_vision: str = "llava:7b"
+    # Reasoning specialist (VibeThinker — AIME-class maths / STEM / code). Used for
+    # the *adaptive routing* path only: quantitative questions reason here, then qwen
+    # formats + cites the result. Empty string disables routing entirely.
+    # Serve via Ollama (GGUF) or a vLLM sidecar; recommended sampler temp≈0.6 top_p≈0.95.
+    model_solver: str = "vibethinker:3b"
 
     confidence_threshold: float = 0.60
     pdf_chunk_pages: int = 3
@@ -50,6 +63,39 @@ class Settings(BaseSettings):
     # RAG-Fusion / multi-query — generates 2-3 paraphrases of each (sub-)query
     # and RRF-fuses results. One extra qwen call per query.
     query_multi_query: bool = True
+
+    # Adaptive model routing — detect quantitative/STEM questions (maths, economics,
+    # science, engineering/industrial materials) and route the *reasoning* to
+    # `model_solver` (VibeThinker), then let qwen format + cite. Self-disables if
+    # `model_solver` is empty or not installed (falls back to qwen synthesis).
+    route_solver_enabled: bool = True
+    # Allow a gemma LLM fallback for domain detection when regex signals are absent.
+    route_solver_llm_fallback: bool = False
+    # VibeThinker sampler — authors recommend temperature 0.6, top_p 0.95.
+    solver_temperature: float = 0.6
+    # Domain tagging at ingest — stamp pages with a `domain:` frontmatter field so
+    # retrieval/routing can reason about subject matter. One heuristic check per page.
+    ingest_domain_tagging: bool = True
+
+    # Agentic ingestion — inspect each document's structure + content density and pick
+    # adaptive chunk size/overlap (dense technical → smaller, narrative → larger) instead
+    # of a fixed 6000-char target. Heuristic is cheap and on by default; the gemma
+    # refinement (one extra call per doc) is opt-in.
+    ingest_agentic_planning: bool = True
+    ingest_planning_llm: bool = False
+
+    # Multimodal knowledge graph (Phase 1) — persist tables/images/code/formulas as
+    # first-class media_nodes linked to entities, each embedded as its own dense unit.
+    # Off by default (populating requires re-ingest). Retrieval through media nodes is
+    # a later phase; Phase 1 is data-only.
+    graph_multimodal_nodes: bool = False
+
+    # Privacy / secret redaction — strip API keys, JWTs, private keys and plaintext
+    # passwords from raw source text BEFORE it reaches the summariser / claims / graph /
+    # embeddings / on-disk page. Audit-logged as PRIVACY_REDACT. (CLAUDE.md policy.)
+    ingest_redact_secrets: bool = True
+    # Emails are PII but public author emails are legitimate content — opt-in only.
+    ingest_redact_emails: bool = False
 
     # Adaptive retrieval — classify question intent (factual / multi_hop /
     # synthesis / exhaustive) and pick top_k + full_page_mode + graph_expand

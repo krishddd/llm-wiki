@@ -542,11 +542,90 @@ class Ingestor:
                         meta={
                             "title": title,
                             "confidence": frontmatter.get("confidence", 0.6),
-                            "parent_id": pid
+                            "parent_id": pid,
+                            "domain": frontmatter.get("domain", "general"),
                         }
                     )
                 except Exception as e:
                     log.warning("Dense chunk upsert failed", extra={"metadata": {"error": str(e)[:160]}})
+
+    # Display-math and inline-math spans → first-class formula media nodes.
+    _FORMULA_SPAN_RE = re.compile(r"\$\$.+?\$\$|\$[^$\n]{2,}?\$|\\\[.+?\\\]", re.DOTALL)
+    _MEDIA_REL_BY_KIND = {"table": "MEASURES", "image": "DEPICTS", "code": "REFERENCES", "formula": "DEFINES"}
+    _MAX_FORMULA_NODES = 30
+
+    async def _populate_media_graph(self, pid: str, title: str, domain: str, elements, entities) -> None:
+        """Phase 1: create media_nodes (table/image/code/formula) for a page, embed
+        each as its own dense unit, and link them to entities by name presence.
+
+        Best-effort and idempotent — clears the page's existing media nodes first so a
+        re-ingest replaces rather than duplicates.
+        """
+        try:
+            await self.graph.delete_media_for_page(pid)
+        except Exception as e:
+            log.debug("media cleanup failed", extra={"metadata": {"error": str(e)[:120]}})
+
+        ent_list = [(e.name, e.type.upper()) for e in entities if getattr(e, "name", "")]
+
+        # Collect modality units in document order.
+        units: list[tuple[str, str, str | None]] = []   # (kind, content, caption)
+        formula_count = 0
+        for el in elements:
+            meta = getattr(el, "meta", None) or {}
+            if el.kind == "table":
+                units.append(("table", el.content or "", meta.get("caption")))
+            elif el.kind == "image":
+                cap = meta.get("caption") or meta.get("description")
+                units.append(("image", cap or meta.get("path") or el.content or "[image]", cap))
+            elif el.kind == "code":
+                units.append(("code", el.content or "", meta.get("lang")))
+            elif el.kind in ("text", "heading") and el.content:
+                for m in self._FORMULA_SPAN_RE.findall(el.content):
+                    if formula_count >= self._MAX_FORMULA_NODES:
+                        break
+                    units.append(("formula", m.strip(), None))
+                    formula_count += 1
+
+        linked = 0
+        for n, (kind, content, caption) in enumerate(units):
+            if not content or not content.strip():
+                continue
+            emb_id = f"{pid}#media#{n}"
+            try:
+                mid = await self.graph.add_media_node(
+                    page_id=pid, kind=kind, content=content[:4000],
+                    caption=(caption or None), ordinal=n, embedding_id=emb_id,
+                )
+            except Exception as e:
+                log.debug("media node insert failed", extra={"metadata": {"error": str(e)[:120]}})
+                continue
+            # Embed the unit as its own dense vector so it is independently retrievable.
+            try:
+                embed_text = f"{caption or ''}\n{content}".strip()[:4000]
+                await self.dense.upsert(
+                    emb_id, embed_text,
+                    meta={"title": title, "parent_id": pid, "media_kind": kind, "domain": domain},
+                )
+            except Exception as e:
+                log.debug("media embed failed", extra={"metadata": {"error": str(e)[:120]}})
+            # Link to entities whose name appears in the unit's content/caption.
+            hay = f"{content}\n{caption or ''}".lower()
+            rel = self._MEDIA_REL_BY_KIND.get(kind, "DEPICTS")
+            for ename, etype in ent_list:
+                if len(ename) >= 3 and ename.lower() in hay:
+                    try:
+                        await self.graph.link_media_entity(
+                            media_id=mid, entity_name=ename, entity_type=etype, rel_type=rel,
+                        )
+                        linked += 1
+                    except Exception:
+                        pass
+        if units:
+            log.info(
+                "media graph populated",
+                extra={"metadata": {"page": pid, "nodes": len(units), "links": linked}},
+            )
 
     async def ingest_file(self, source_path: str | Path) -> IngestResult:
         src = Path(source_path)
@@ -563,15 +642,61 @@ class Ingestor:
             log.exception("load failed")
             return IngestResult(source=str(src), page_path="", confidence=0.0, is_live=False, title=title, error=str(e))
 
+        # Privacy redaction — strip secrets/PII from raw text BEFORE it reaches the
+        # summariser, claim extractor, graph, embeddings, or the on-disk page.
+        if self.s.ingest_redact_secrets:
+            from .privacy import redact_text
+            redaction_counts: dict[str, int] = {}
+            for el in elements:
+                if el.kind in ("text", "heading", "table", "code") and el.content:
+                    res = redact_text(el.content, redact_emails=self.s.ingest_redact_emails)
+                    if res.redacted:
+                        el.content = res.text
+                        for cat, n in res.counts.items():
+                            redaction_counts[cat] = redaction_counts.get(cat, 0) + n
+            if redaction_counts:
+                log.warning(
+                    "privacy redaction applied",
+                    extra={"metadata": {"source": str(src), "counts": redaction_counts}},
+                )
+                try:
+                    audit(
+                        log, "PRIVACY_REDACT", str(src),
+                        total=sum(redaction_counts.values()), counts=redaction_counts,
+                    )
+                except Exception as e:
+                    log.debug("redaction audit failed", extra={"metadata": {"error": str(e)[:120]}})
+
         # Optional llava captions for image elements (in-place mutation).
         try:
             await self._caption_images(elements)
         except Exception as e:
             log.debug("caption pass failed", extra={"metadata": {"error": str(e)[:120]}})
 
+        # Agentic ingestion — pick adaptive chunk params from document structure +
+        # content density (dense technical → smaller chunks; narrative → larger).
+        chunk_target, chunk_overlap = 6000, self.s.ingest_overlap
+        ingest_plan = None
+        if self.s.ingest_agentic_planning:
+            from .agentic_ingest import plan_ingest
+            ingest_plan = plan_ingest(
+                elements, default_target=6000, default_overlap=self.s.ingest_overlap
+            )
+            if self.s.ingest_planning_llm:
+                from .agentic_ingest import plan_ingest_llm
+                ingest_plan = await plan_ingest_llm(self.c, elements, ingest_plan)
+            chunk_target, chunk_overlap = ingest_plan.target_chars, ingest_plan.overlap_chars
+            log.info(
+                "agentic ingest plan",
+                extra={"metadata": {
+                    "strategy": ingest_plan.strategy, "target_chars": chunk_target,
+                    "overlap_chars": chunk_overlap, "rationale": ingest_plan.rationale,
+                }},
+            )
+
         # Layout-aware chunking — tables and images stay atomic.
         chunks = layout_aware_chunks(
-            elements, target_chars=6000, overlap_chars=self.s.ingest_overlap
+            elements, target_chars=chunk_target, overlap_chars=chunk_overlap
         )
         if not chunks:
             # Defensive fallback — no structured elements extracted, flatten and chunk.
@@ -655,6 +780,13 @@ class Ingestor:
         entity_refs = [e.name for e in entities][:50]
         has_tables = any(el.kind == "table" for el in elements)
         has_images = any(el.kind == "image" for el in elements)
+        # Domain tag — stamp the page's subject (general / math / science / economics /
+        # engineering) so retrieval + adaptive model routing can reason about it. One
+        # cheap heuristic check against the title + summary.
+        domain = "general"
+        if self.s.ingest_domain_tagging:
+            from .search.domain import heuristic_domain
+            domain = heuristic_domain(f"{title}\n{summary or ''}") or "general"
         frontmatter = {
             "title": title,
             "source": str(src).replace("\\", "/"),
@@ -662,6 +794,8 @@ class Ingestor:
             "source_count": 1,
             "confidence": round(confidence, 2),
             "confidence_reason": reason[:300],
+            "domain": domain,
+            "chunk_strategy": ingest_plan.strategy if ingest_plan else "fixed",
             "tags": sorted({e.type.lower() for e in entities}),
             "entity_refs": entity_refs,
             "has_tables": has_tables,
@@ -687,7 +821,7 @@ class Ingestor:
         # Otherwise the preamble field can't make it into the on-disk frontmatter.
         if self.s.ingest_contextual_retrieval and summary:
             try:
-                from .search.contextual import contextualize_chunk, merge_context_with_chunk
+                from .search.contextual import contextualize_chunk
                 preamble = await contextualize_chunk(
                     self.c,
                     doc_title=title,
@@ -696,7 +830,8 @@ class Ingestor:
                     semaphore=self._sem,
                 )
                 if preamble:
-                    merge_context_with_chunk(preamble, f"{title}\n{summary}")
+                    # The preamble is merged with the chunk text at index time inside
+                    # `_index_page_chunks`; here we only need to persist it to frontmatter.
                     frontmatter["context_preamble"] = preamble[:300]
             except Exception as e:
                 log.debug("contextual preamble failed", extra={"metadata": {"error": str(e)[:120]}})
@@ -724,6 +859,14 @@ class Ingestor:
                 log.debug("claim extraction/persist failed",
                           extra={"metadata": {"error": str(e)[:120]}})
         await self._index_page_chunks(pid, title, body, frontmatter)
+
+        # ── Multimodal graph (Phase 1): persist tables/images/code/formulas as
+        # first-class media nodes linked to entities, each embedded as its own unit.
+        if self.s.graph_multimodal_nodes and self.graph and self.dense:
+            try:
+                await self._populate_media_graph(pid, title, domain, elements, entities)
+            except Exception as e:
+                log.debug("media graph population failed", extra={"metadata": {"error": str(e)[:160]}})
 
         # ── Memory evolution / Reconciliation pass (A-Mem 2026) ──
         # After publishing the new page, propose edits to existing pages most

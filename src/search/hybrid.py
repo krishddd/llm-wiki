@@ -36,6 +36,9 @@ def _rrf_fuse(rank_lists: list[list[str]], k: int = 60) -> list[tuple[str, float
 
 async def _dense_search(dense, query: str, hyde_text: str | None, k: int) -> list[str]:
     """Dense leg. Uses HyDE embedding if provided and supported, else raw query."""
+    # Domain-routed index owns its own embedding-space decision (general vs. STEM).
+    if hasattr(dense, "route_search"):
+        return await dense.route_search(query, hyde_text, k=k)
     if hyde_text and hasattr(dense, "_embed") and hasattr(dense, "search_with_vec"):
         try:
             vec = await dense._embed(hyde_text)

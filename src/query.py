@@ -25,6 +25,7 @@ from typing import Any
 
 from .config import Settings, get_settings
 from .llm import OllamaClient, get_client
+from .search.domain import needs_solver
 from .search.hybrid import hybrid_search
 from .search.intent import profile_for
 from .search.multi_query import paraphrase, rrf_fuse_pages
@@ -69,6 +70,15 @@ SYNTH_SYSTEM = (
     '"entities":["…"],'
     '"confidence":0.XX}\n'
     "Do not wrap the JSON in code fences. Do not add commentary outside the JSON."
+)
+
+SOLVER_SYSTEM = (
+    "You are an expert quantitative reasoner (mathematics, economics, the physical "
+    "sciences, and engineering / materials). Solve the question using ONLY the "
+    "provided wiki pages as evidence. Show your derivation step by step, state every "
+    "formula and unit explicitly, and finish with a clearly labelled final result. "
+    "If the pages lack a required value, say so rather than inventing it. "
+    "Reply in plain text/Markdown — do NOT produce JSON."
 )
 
 HYDE_SYSTEM = (
@@ -130,9 +140,11 @@ class QueryResult:
     saved_page: str | None = None
     retrieval_quality: str = "correct"
     intent: str = "synthesis"
+    reasoner: str = "qwen"   # "qwen" (default synth) or "solver" (VibeThinker routed)
     quality_score: float = 1.0
     quality_issues: list[str] = field(default_factory=list)
     per_claim_confidences: list[dict] = field(default_factory=list)
+    related_media: list[dict] = field(default_factory=list)
 
 
 def _extract_json(s: str) -> dict | None:
@@ -278,7 +290,9 @@ class QueryEngine:
             log.warning("decompose failed", extra={"metadata": {"error": str(e)[:200]}})
             return [question]
 
-    async def _retrieve_one(self, query_text: str, top_k: int, graph_expand: bool, hyde_text: str | None):
+    async def _retrieve_one(
+        self, query_text: str, top_k: int, graph_expand: bool, hyde_text: str | None, use_mmr: bool = True
+    ):
         return await hybrid_search(
             query_text,
             bm25=self.bm25,
@@ -288,6 +302,7 @@ class QueryEngine:
             top_k_rerank=top_k,
             graph_expand=graph_expand,
             hyde_text=hyde_text,
+            use_mmr=use_mmr,
         )
 
     # ── Save-back ──
@@ -360,6 +375,7 @@ class QueryEngine:
         # 0) Adaptive retrieval profile — pick top_k / full-page mode / graph
         # expand by question intent. Heuristic first, gemma fallback.
         adaptive_on = self.s.query_adaptive_retrieval if adaptive is None else adaptive
+        use_mmr = True
         if adaptive_on:
             try:
                 prof = await profile_for(self.c, question, default_top_k=top_k)
@@ -367,6 +383,7 @@ class QueryEngine:
                 graph_expand = graph_expand and prof.graph_expand
                 full_page_mode = prof.full_page_mode
                 intent_label = prof.intent
+                use_mmr = prof.use_mmr
                 log.info(
                     "intent profile",
                     extra={"metadata": {
@@ -452,7 +469,9 @@ class QueryEngine:
                 ranked_lists: list[list[str]] = []
                 page_objs: dict[str, Any] = {}
                 for q in queries_for_sq:
-                    batch = await self._retrieve_one(q, top_k=top_k, graph_expand=graph_expand, hyde_text=hyde_text)
+                    batch = await self._retrieve_one(
+                        q, top_k=top_k, graph_expand=graph_expand, hyde_text=hyde_text, use_mmr=use_mmr
+                    )
                     ranked_lists.append([r.page_id for r in batch])
                     for r in batch:
                         prev = page_objs.get(r.page_id)
@@ -542,7 +561,68 @@ class QueryEngine:
         if active_facts:
             fact_context = "\n\nCANONICAL GRAPH FACTS (VERIFIED ACTIVE TRUTH — CITE THESE WHEN POSSIBLE):\n" + "\n".join(active_facts)
 
-        prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}"
+        # Multimodal graph (Phase 2): surface tables / figures / code linked to the
+        # entities in the retrieved set — even when their own page wasn't top-ranked.
+        # This is the 2-hop media expansion the Phase 1 media_entities edges enable.
+        media_context = ""
+        related_media: list[dict] = []
+        if self.s.graph_multimodal_nodes and self.graph and hasattr(self.graph, "media_for_entity"):
+            seen_media: set[int] = set()
+            for ent in entities_to_query[:15]:
+                try:
+                    media = await self.graph.media_for_entity(ent, limit=3)
+                except Exception as e:
+                    log.debug("media_for_entity failed", extra={"metadata": {"entity": ent, "error": str(e)[:120]}})
+                    continue
+                for m in media:
+                    if m["id"] not in seen_media:
+                        seen_media.add(m["id"])
+                        related_media.append(m)
+            if related_media:
+                lines = [
+                    f"[{m['kind'].upper()} from {m['page_id']} — linked via {m.get('rel_type', 'DEPICTS')}]\n"
+                    f"{(m.get('content') or '')[:1000]}"
+                    for m in related_media[:6]
+                ]
+                media_context = (
+                    "\n\nRELATED MEDIA (tables/figures/code linked to the entities above — "
+                    "reproduce a relevant table verbatim and cite its page):\n" + "\n\n".join(lines)
+                )
+
+        # 4a) Adaptive model routing. Quantitative / STEM questions (maths, economics,
+        # science, engineering / industrial materials) are REASONED by the specialist
+        # solver (VibeThinker); qwen then formats + cites that reasoning. Plain-English
+        # questions skip the solver and go straight to qwen synthesis. Any solver
+        # failure (model not installed, timeout) silently falls back to qwen-only.
+        prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}{media_context}"
+        reasoner_used = "qwen"
+        if (
+            self.s.route_solver_enabled
+            and self.s.model_solver
+            and needs_solver(question, ctx)
+        ):
+            try:
+                solver_prompt = f"WIKI PAGES:\n{ctx}{fact_context}\n\nQUESTION:\n{question}"
+                reasoning = await self.c.solver(solver_prompt, system=SOLVER_SYSTEM)
+                if reasoning and reasoning.strip():
+                    reasoner_used = "solver"
+                    log.info(
+                        "solver routing engaged",
+                        extra={"metadata": {"model": self.s.model_solver, "reasoning_chars": len(reasoning)}},
+                    )
+                    prompt = (
+                        f"QUESTION:\n{question}\n\n"
+                        f"VERIFIED EXPERT REASONING (treat as a trusted working — preserve its "
+                        f"numbers, formulas and final result; your job is to format and cite it "
+                        f"against the wiki pages):\n{reasoning[:6000]}\n\n"
+                        f"WIKI PAGES:\n{ctx}{fact_context}{media_context}"
+                    )
+            except Exception as e:
+                log.warning(
+                    "solver routing failed, falling back to qwen synthesis",
+                    extra={"metadata": {"error": str(e)[:200]}},
+                )
+
         raw = await self.c.qwen(prompt, system=SYNTH_SYSTEM, temperature=0.2)
         data = _extract_json(raw)
         if data is None:
@@ -696,10 +776,12 @@ class QueryEngine:
             saved_page=saved,
             retrieval_quality=crag_overall,
             intent=intent_label,
+            reasoner=reasoner_used,
             quality_score=round(critique_score, 3),
             quality_issues=critique_issues,
             per_claim_confidences=[
                 {"citation": c.citation_token, "confidence": round(c.confidence, 3)}
                 for c in per_claim
             ],
+            related_media=related_media,
         )
