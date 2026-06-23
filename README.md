@@ -277,7 +277,8 @@ PROVIDER_REASON=github       GITHUB_MODELS_TOKEN=... GITHUB_MODELS_MODEL=openai/
 
 Roles: `PROVIDER_SUMMARY` (gemma), `PROVIDER_REASON` (qwen/synthesis),
 `PROVIDER_FAST` (fast-agent), `PROVIDER_SOLVER` (VibeThinker), `PROVIDER_EMBED`
-(embeddings — `ollama` or `gemini`). All default to `ollama`.
+(embeddings — `ollama` or `gemini`), `PROVIDER_VISION` (image captions — routes the
+llava role to a multimodal provider via OpenAI `image_url`). All default to `ollama`.
 
 ---
 

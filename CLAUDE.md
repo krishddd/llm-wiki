@@ -23,9 +23,10 @@ All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`)
 
 ### Multi-provider LLM fleet (v4, `src/providers.py`)
 
-Each text role can be routed to a hosted, OpenAI-compatible provider instead of
-Ollama via `PROVIDER_<ROLE>` (`summary` / `reason` / `fast` / `solver` / `embed`),
-default `ollama`. Providers: `groq` (LPU-fast open weights), `github` (GitHub Models,
+Each role can be routed to a hosted, OpenAI-compatible provider instead of
+Ollama via `PROVIDER_<ROLE>` (`summary` / `reason` / `fast` / `solver` / `embed` /
+`vision`), default `ollama`. Vision routes the llava image-caption role to a
+multimodal provider via the OpenAI `image_url` content schema. Providers: `groq` (LPU-fast open weights), `github` (GitHub Models,
 gpt-4.1 family), `gemini` (Google AI Studio; the only provider wired for embeddings).
 `resolve_chat_provider()` returns `None` (→ Ollama) when the role is `ollama` or its
 key/model is unset, so routing is opt-in and self-healing. A provider HTTP error is

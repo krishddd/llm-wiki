@@ -14,6 +14,8 @@ from src.providers import (
     embed_one,
     resolve_chat_provider,
     resolve_embed_provider,
+    resolve_vision_provider,
+    vision_completion,
 )
 
 
@@ -26,6 +28,8 @@ def _settings(**kw):
         github_models_model="openai/gpt-4.1-mini",
         gemini_base_url="https://generativelanguage.googleapis.com/v1beta/openai", google_genai_api_key="",
         gemini_model="gemini-2.5-flash-lite", gemini_embed_model="text-embedding-004",
+        provider_vision="ollama", groq_vision_model="",
+        github_models_vision_model="openai/gpt-4.1-mini", gemini_vision_model="gemini-2.5-flash-lite",
     )
     base.update(kw)
     return SimpleNamespace(**base)
@@ -106,6 +110,34 @@ async def test_chat_completion_empty_choices() -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"choices": []}))) as http:
         spec = ProviderSpec("groq", "https://x/v1", "k", "m")
         assert await chat_completion(http, spec, "hi", None) == ""
+
+
+def test_vision_provider_resolution() -> None:
+    assert resolve_vision_provider(_settings(provider_vision="ollama")) is None
+    # Groq vision model unset → falls back to Ollama.
+    assert resolve_vision_provider(_settings(provider_vision="groq", groq_api_key="gsk_x")) is None
+    s = _settings(provider_vision="gemini", google_genai_api_key="AIz_x")
+    spec = resolve_vision_provider(s)
+    assert spec is not None and spec.name == "gemini" and spec.model == "gemini-2.5-flash-lite"
+
+
+@pytest.mark.asyncio
+async def test_vision_completion_sends_image_url() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "a red square"}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        spec = ProviderSpec("gemini", "https://x/openai", "AIz", "gemini-2.5-flash-lite")
+        out = await vision_completion(http, spec, "describe", "BASE64DATA", image_mime="image/png")
+
+    assert out == "a red square"
+    content = captured["body"]["messages"][0]["content"]
+    assert content[0] == {"type": "text", "text": "describe"}
+    assert content[1]["type"] == "image_url"
+    assert content[1]["image_url"]["url"] == "data:image/png;base64,BASE64DATA"
 
 
 @pytest.mark.asyncio
