@@ -21,6 +21,18 @@
 All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`).
 `MODEL_FAST = MODEL_REASON` is intentional — disables a missing-llama3.2 fallback.
 
+### Multi-provider LLM fleet (v4, `src/providers.py`)
+
+Each text role can be routed to a hosted, OpenAI-compatible provider instead of
+Ollama via `PROVIDER_<ROLE>` (`summary` / `reason` / `fast` / `solver` / `embed`),
+default `ollama`. Providers: `groq` (LPU-fast open weights), `github` (GitHub Models,
+gpt-4.1 family), `gemini` (Google AI Studio; the only provider wired for embeddings).
+`resolve_chat_provider()` returns `None` (→ Ollama) when the role is `ollama` or its
+key/model is unset, so routing is opt-in and self-healing. A provider HTTP error is
+re-raised as `OllamaError` so the existing role fallbacks (e.g. qwen→llama) still fire.
+Keys (`GROQ_API_KEY`, `GITHUB_MODELS_TOKEN`, `GOOGLE_GENAI_API_KEY`) are read from env
+ONLY — never committed.
+
 ### Adaptive model routing (VibeThinker)
 
 `model_solver` (default `vibethinker:3b`, [WeiboAI/VibeThinker](https://github.com/WeiboAI/VibeThinker))

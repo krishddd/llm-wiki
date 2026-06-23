@@ -32,6 +32,34 @@ class Settings(BaseSettings):
     model_summary: str = "gemma4:e4b"
     model_fast: str = "qwen3:14b"
     model_vision: str = "llava:7b"
+
+    # ── v4 multi-provider LLM fleet ──────────────────────────────────────────────
+    # Each text role can be routed to a hosted, OpenAI-compatible provider instead of
+    # local Ollama. Default "ollama" for every role → no behaviour change. A role
+    # silently falls back to Ollama if its provider's API key or model is unset.
+    # Providers: "ollama" | "groq" | "github" | "gemini".
+    provider_summary: str = "ollama"   # gemma role
+    provider_reason: str = "ollama"    # qwen role (synthesis / deep reasoning)
+    provider_fast: str = "ollama"      # fast-agent role
+    provider_solver: str = "ollama"    # VibeThinker reasoning role
+    provider_embed: str = "ollama"     # embeddings (only "ollama" | "gemini" supported)
+
+    # Provider API keys — SECRETS, supplied via env / .env ONLY (never commit real values).
+    groq_api_key: str = ""
+    github_models_token: str = ""
+    google_genai_api_key: str = ""
+
+    # Provider model names.
+    groq_model: str = "llama-3.3-70b-versatile"
+    github_models_model: str = "openai/gpt-4.1-mini"
+    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_embed_model: str = "text-embedding-004"
+
+    # Provider base URLs (OpenAI-compatible gateways; override if a provider moves).
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    github_models_base_url: str = "https://models.github.ai/inference"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+
     # Reasoning specialist (VibeThinker — AIME-class maths / STEM / code). Used for
     # the *adaptive routing* path only: quantitative questions reason here, then qwen
     # formats + cites the result. Empty string disables routing entirely.

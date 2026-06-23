@@ -111,12 +111,34 @@ class OllamaClient:
             f"and OLLAMA_MAX_LOADED_MODELS=1."
         ) from last_err
 
+    async def _role_chat(
+        self, role: str, ollama_model: str, prompt: str, system: str | None,
+        *, temperature: float = 0.3, timeout: float | None = None,
+    ) -> str:
+        """Dispatch a text role to its configured provider, or Ollama by default.
+
+        Hosted providers (Groq / GitHub Models / Gemini) are OpenAI-compatible; a
+        provider HTTP error is re-raised as OllamaError so existing role fallbacks
+        (e.g. qwen→llama) still apply. Missing key/model → transparent Ollama path.
+        """
+        from .providers import chat_completion, resolve_chat_provider
+        spec = resolve_chat_provider(self.settings, role)
+        if spec is None:
+            return await self._chat(ollama_model, prompt, system, temperature=temperature, timeout=timeout)
+        try:
+            return await chat_completion(
+                self._client, spec, prompt, system,
+                temperature=temperature, timeout=timeout or self.settings.llm_timeout,
+            )
+        except httpx.HTTPError as e:
+            raise OllamaError(f"{spec.name} chat failed for {spec.model}: {type(e).__name__}: {e!s}") from e
+
     async def gemma(self, prompt: str, system: str | None = None, *, temperature: float = 0.4) -> str:
-        return await self._chat(self.settings.model_summary, prompt, system, temperature=temperature)
+        return await self._role_chat("summary", self.settings.model_summary, prompt, system, temperature=temperature)
 
     async def qwen(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
         try:
-            return await self._chat(self.settings.model_reason, prompt, system, temperature=temperature)
+            return await self._role_chat("reason", self.settings.model_reason, prompt, system, temperature=temperature)
         except OllamaError as e:
             # Only fall back if model_fast is a genuinely different model; otherwise re-raise
             # so the caller's own fallback (e.g. ingest's merge-concat) kicks in instead of
@@ -130,9 +152,11 @@ class OllamaClient:
             raise
 
     async def llama(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
-        # Named "llama" for historical reasons — actually dispatches to model_fast, whatever that is.
-        return await self._chat(
-            self.settings.model_fast, prompt, system, temperature=temperature, timeout=self.settings.llm_fast_timeout
+        # Named "llama" for historical reasons — actually dispatches to the fast role
+        # (model_fast on Ollama, or the provider_fast hosted model, e.g. Groq).
+        return await self._role_chat(
+            "fast", self.settings.model_fast, prompt, system,
+            temperature=temperature, timeout=self.settings.llm_fast_timeout,
         )
 
     async def solver(self, prompt: str, system: str | None = None, *, temperature: float | None = None) -> str:
@@ -143,10 +167,11 @@ class OllamaClient:
         Raises OllamaError if `model_solver` is unset or the model isn't served;
         callers should catch and fall back to qwen synthesis.
         """
-        if not self.settings.model_solver:
+        spec_provider = self.settings.provider_solver and self.settings.provider_solver.lower() != "ollama"
+        if not self.settings.model_solver and not spec_provider:
             raise OllamaError("model_solver is not configured")
         temp = self.settings.solver_temperature if temperature is None else temperature
-        raw = await self._chat(self.settings.model_solver, prompt, system, temperature=temp)
+        raw = await self._role_chat("solver", self.settings.model_solver, prompt, system, temperature=temp)
         return strip_think(raw)
 
     async def llava(self, prompt: str, image_path: str | Path) -> str:
@@ -154,22 +179,28 @@ class OllamaClient:
         return await self._chat(self.settings.model_vision, prompt, None, images=[img_b64])
 
     async def embed(self, text: str, *, model: str | None = None) -> list[float]:
-        # `model` overrides the default embedder (used by the STEM-routed dense index).
-        embed_model = model or self.settings.model_embed
+        # A `model` override (used by the STEM-routed dense index) always means a
+        # specific Ollama embedder; only the default path may route to a provider.
+        from .providers import embed_one, resolve_embed_provider
+        embed_spec = resolve_embed_provider(self.settings) if model is None else None
+        embed_model = model or (embed_spec.model if embed_spec else self.settings.model_embed)
         # Cache key = (model, text) — bounded FIFO eviction.
         key = f"{embed_model}::{text}"
         cached = self._embed_cache.get(key)
         if cached is not None:
             return cached
-        payload = {"model": embed_model, "prompt": text}
         try:
-            r = await self._client.post(
-                f"{self.settings.ollama_host}/api/embeddings", json=payload, timeout=self.settings.llm_timeout
-            )
-            r.raise_for_status()
+            if embed_spec is not None:
+                vec = await embed_one(self._client, embed_spec, text, timeout=self.settings.llm_timeout)
+            else:
+                r = await self._client.post(
+                    f"{self.settings.ollama_host}/api/embeddings",
+                    json={"model": embed_model, "prompt": text}, timeout=self.settings.llm_timeout,
+                )
+                r.raise_for_status()
+                vec = list(r.json().get("embedding") or [])
         except httpx.HTTPError as e:
             raise OllamaError(f"embed failed: {e}") from e
-        vec = list(r.json().get("embedding") or [])
         if vec:
             if len(self._embed_cache) >= self._EMBED_CACHE_MAX:
                 # Evict oldest insertion.
