@@ -39,7 +39,8 @@ jobs:
             tests/test_privacy.py \
             tests/test_dense_router.py \
             tests/test_agentic_ingest.py \
-            tests/test_media_graph.py
+            tests/test_media_graph.py \
+            tests/test_providers.py
       - name: Unit tests — full suite (Ollama mocked, non-blocking)
         continue-on-error: true
         env:

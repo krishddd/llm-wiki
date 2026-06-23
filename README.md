@@ -244,12 +244,40 @@ var). Manual one-off runs available via `POST /admin/run/{job_name}`.
 
 | Role                         | Model                       | Notes                                  |
 |------------------------------|-----------------------------|----------------------------------------|
+| Role                         | Model                       | Notes                                  |
 | Summarise, extract           | `gemma3:e4b`                | Fast, strong instruction-following     |
 | Reason, route, lint, claims  | `qwen3:14b`                 | Deep reasoning, thinking mode          |
+| Quantitative specialist      | `vibethinker:3b`            | AIME-class maths/STEM; routed to adaptively |
 | Embeddings                   | `nomic-embed-text:latest`   | 274 MB, MTEB-strong                    |
+| STEM embeddings (optional)   | `bge-m3`                    | Notation-aware; `EMBED_STEM_ENABLED`   |
 | Vision (image captions)      | `llava:7b`                  | Optional, when `ingest_caption_images` |
 
-All served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`).
+Served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`) by default.
+
+### Multi-provider LLM fleet (v4)
+
+Any text role can be pointed at a hosted, **OpenAI-compatible** provider instead of
+Ollama — useful when you lack local GPU headroom or want a stronger reasoner. Set
+`PROVIDER_<ROLE>` and supply that provider's key + model; the role falls back to
+Ollama automatically if the key/model is missing, and a provider error degrades to
+the existing role fallback. Keys live only in your local `.env` (gitignored) — never
+commit them.
+
+| Provider | Gateway | Typical route |
+|---|---|---|
+| **Groq** | `api.groq.com/openai/v1` | `PROVIDER_FAST=groq` — LPU-fast open-weight models for the fast-agent path |
+| **GitHub Models** | `models.github.ai/inference` | `PROVIDER_REASON=github` — gpt-4.1 family as a deep reasoner |
+| **Google Gemini** | `…/v1beta/openai` | `PROVIDER_SUMMARY=gemini` or `PROVIDER_EMBED=gemini` (only Gemini does embeddings) |
+
+```bash
+# Example: route the fast role to Groq and the reasoner to GitHub Models
+PROVIDER_FAST=groq           GROQ_API_KEY=...        GROQ_MODEL=llama-3.3-70b-versatile
+PROVIDER_REASON=github       GITHUB_MODELS_TOKEN=... GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
+```
+
+Roles: `PROVIDER_SUMMARY` (gemma), `PROVIDER_REASON` (qwen/synthesis),
+`PROVIDER_FAST` (fast-agent), `PROVIDER_SOLVER` (VibeThinker), `PROVIDER_EMBED`
+(embeddings — `ollama` or `gemini`). All default to `ollama`.
 
 ---
 
