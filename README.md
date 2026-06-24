@@ -244,8 +244,7 @@ var). Manual one-off runs available via `POST /admin/run/{job_name}`.
 
 | Role                         | Model                       | Notes                                  |
 |------------------------------|-----------------------------|----------------------------------------|
-| Role                         | Model                       | Notes                                  |
-| Summarise, extract           | `gemma3:e4b`                | Fast, strong instruction-following     |
+| Summarise, extract           | `gemma4:e4b`                | Fast, strong instruction-following     |
 | Reason, route, lint, claims  | `qwen3:14b`                 | Deep reasoning, thinking mode          |
 | Quantitative specialist      | `vibethinker:3b`            | AIME-class maths/STEM; routed to adaptively |
 | Embeddings                   | `nomic-embed-text:latest`   | 274 MB, MTEB-strong                    |
