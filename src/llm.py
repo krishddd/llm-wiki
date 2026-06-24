@@ -176,6 +176,17 @@ class OllamaClient:
 
     async def llava(self, prompt: str, image_path: str | Path) -> str:
         img_b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
+        from .providers import resolve_vision_provider, vision_completion
+        spec = resolve_vision_provider(self.settings)
+        if spec is not None:
+            mime = "image/jpeg" if Path(image_path).suffix.lower() in (".jpg", ".jpeg") else "image/png"
+            try:
+                return await vision_completion(
+                    self._client, spec, prompt, img_b64,
+                    image_mime=mime, timeout=self.settings.llm_timeout,
+                )
+            except httpx.HTTPError as e:
+                raise OllamaError(f"{spec.name} vision failed for {spec.model}: {type(e).__name__}: {e!s}") from e
         return await self._chat(self.settings.model_vision, prompt, None, images=[img_b64])
 
     async def embed(self, text: str, *, model: str | None = None) -> list[float]:

@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     provider_fast: str = "ollama"      # fast-agent role
     provider_solver: str = "ollama"    # VibeThinker reasoning role
     provider_embed: str = "ollama"     # embeddings (only "ollama" | "gemini" supported)
+    provider_vision: str = "ollama"    # image captioning (llava role)
 
     # Provider API keys — SECRETS, supplied via env / .env ONLY (never commit real values).
     groq_api_key: str = ""
@@ -54,6 +55,11 @@ class Settings(BaseSettings):
     github_models_model: str = "openai/gpt-4.1-mini"
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_embed_model: str = "text-embedding-004"
+    # Vision (multimodal) model names. github/gemini chat models are already multimodal;
+    # Groq needs an explicit vision model (left empty → vision falls back to Ollama).
+    groq_vision_model: str = ""
+    github_models_vision_model: str = "openai/gpt-4.1-mini"
+    gemini_vision_model: str = "gemini-2.5-flash-lite"
 
     # Provider base URLs (OpenAI-compatible gateways; override if a provider moves).
     groq_base_url: str = "https://api.groq.com/openai/v1"

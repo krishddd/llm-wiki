@@ -69,6 +69,22 @@ def resolve_embed_provider(settings) -> ProviderSpec | None:
     return _spec(settings, "gemini", "gemini_embed_model")
 
 
+# provider → its vision model attr. Missing/empty model → None (Ollama fallback).
+_VISION_MODEL_ATTRS = {
+    "groq": "groq_vision_model",
+    "github": "github_models_vision_model",
+    "gemini": "gemini_vision_model",
+}
+
+
+def resolve_vision_provider(settings) -> ProviderSpec | None:
+    """Return the vision provider for the llava (image-caption) role, or None for Ollama."""
+    provider = (getattr(settings, "provider_vision", "ollama") or "ollama").lower()
+    if provider == "ollama" or provider not in _VISION_MODEL_ATTRS:
+        return None
+    return _spec(settings, provider, _VISION_MODEL_ATTRS[provider])
+
+
 def build_chat_payload(model: str, prompt: str, system: str | None, temperature: float) -> dict:
     msgs: list[dict] = []
     if system:
@@ -92,6 +108,45 @@ async def chat_completion(
 ) -> str:
     """OpenAI-compatible chat completion against `spec`. Raises httpx.HTTPError on failure."""
     payload = build_chat_payload(spec.model, prompt, system, temperature)
+    r = await http.post(
+        f"{spec.base_url}/chat/completions",
+        json=payload, headers=_auth_headers(spec.api_key), timeout=timeout,
+    )
+    r.raise_for_status()
+    data = r.json()
+    choices = data.get("choices") or []
+    if not choices:
+        return ""
+    return (choices[0].get("message") or {}).get("content") or ""
+
+
+async def vision_completion(
+    http: httpx.AsyncClient,
+    spec: ProviderSpec,
+    prompt: str,
+    image_b64: str,
+    *,
+    image_mime: str = "image/png",
+    temperature: float = 0.2,
+    timeout: float = 120.0,
+) -> str:
+    """OpenAI-compatible multimodal completion — text prompt + one base64 image.
+
+    Uses the standard `content` array with an `image_url` data URI, which Gemini,
+    GitHub Models, and Groq vision models all accept. Raises httpx.HTTPError on failure.
+    """
+    payload = {
+        "model": spec.model,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}},
+            ],
+        }],
+        "temperature": temperature,
+        "stream": False,
+    }
     r = await http.post(
         f"{spec.base_url}/chat/completions",
         json=payload, headers=_auth_headers(spec.api_key), timeout=timeout,
