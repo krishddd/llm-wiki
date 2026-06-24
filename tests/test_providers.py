@@ -73,6 +73,29 @@ def test_embed_provider_only_gemini() -> None:
     assert spec is not None and spec.model == "text-embedding-004"
 
 
+def test_three_provider_fleet_resolves_together() -> None:
+    # Groq (fast) + GitHub Models (reason) + Gemini (summary + embed + vision), all at once.
+    s = _settings(
+        provider_fast="groq", groq_api_key="gsk_x",
+        provider_reason="github", github_models_token="ghp_x",
+        provider_summary="gemini", google_genai_api_key="AIz_x",
+        provider_embed="gemini", provider_vision="gemini",
+    )
+    assert resolve_chat_provider(s, "fast").name == "groq"
+    assert resolve_chat_provider(s, "reason").name == "github"
+    assert resolve_chat_provider(s, "summary").name == "gemini"
+    assert resolve_embed_provider(s).name == "gemini"          # embeddings → Gemini
+    assert resolve_vision_provider(s).name == "gemini"
+    # A role left on ollama stays on ollama.
+    assert resolve_chat_provider(s, "solver") is None
+
+
+def test_embeddings_reject_non_gemini_providers() -> None:
+    # Groq / GitHub have no embeddings endpoint → must fall back to Ollama (None).
+    assert resolve_embed_provider(_settings(provider_embed="groq", groq_api_key="gsk_x")) is None
+    assert resolve_embed_provider(_settings(provider_embed="github", github_models_token="ghp_x")) is None
+
+
 def test_build_chat_payload_shape() -> None:
     p = build_chat_payload("m", "hi", "sys", 0.5)
     assert p["model"] == "m" and p["temperature"] == 0.5 and p["stream"] is False

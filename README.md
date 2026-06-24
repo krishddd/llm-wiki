@@ -270,15 +270,21 @@ commit them.
 | **Google Gemini** | `…/v1beta/openai` | `PROVIDER_SUMMARY=gemini` or `PROVIDER_EMBED=gemini` (only Gemini does embeddings) |
 
 ```bash
-# Example: route the fast role to Groq and the reasoner to GitHub Models
-PROVIDER_FAST=groq           GROQ_API_KEY=...        GROQ_MODEL=llama-3.3-70b-versatile
-PROVIDER_REASON=github       GITHUB_MODELS_TOKEN=... GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
+# Full three-provider fleet — Groq + GitHub Models + Gemini, no local Ollama needed
+PROVIDER_FAST=groq       GROQ_API_KEY=...            GROQ_MODEL=llama-3.3-70b-versatile
+PROVIDER_REASON=github   GITHUB_MODELS_TOKEN=...     GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
+PROVIDER_SUMMARY=gemini  GOOGLE_GENAI_API_KEY=...    GEMINI_MODEL=gemini-2.5-flash-lite
+PROVIDER_EMBED=gemini                                GEMINI_EMBED_MODEL=text-embedding-004
 ```
 
 Roles: `PROVIDER_SUMMARY` (gemma), `PROVIDER_REASON` (qwen/synthesis),
-`PROVIDER_FAST` (fast-agent), `PROVIDER_SOLVER` (VibeThinker), `PROVIDER_EMBED`
-(embeddings — `ollama` or `gemini`), `PROVIDER_VISION` (image captions — routes the
-llava role to a multimodal provider via OpenAI `image_url`). All default to `ollama`.
+`PROVIDER_FAST` (fast-agent), `PROVIDER_SOLVER` (VibeThinker), `PROVIDER_VISION`
+(image captions via OpenAI `image_url`). All default to `ollama`.
+
+> **Embeddings — Gemini only.** Groq and GitHub Models do not expose an embeddings
+> endpoint, so `PROVIDER_EMBED` accepts only `ollama` or `gemini`. Set
+> `PROVIDER_EMBED=gemini` + `GOOGLE_GENAI_API_KEY` to embed via
+> `text-embedding-004`; any other value falls back to the local Ollama embedder.
 
 ---
 
