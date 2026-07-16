@@ -33,38 +33,61 @@ class Settings(BaseSettings):
     model_fast: str = "qwen3:14b"
     model_vision: str = "llava:7b"
 
-    # ── v4 multi-provider LLM fleet ──────────────────────────────────────────────
+    # ── v4/v6 multi-provider LLM fleet ───────────────────────────────────────────
     # Each text role can be routed to a hosted, OpenAI-compatible provider instead of
     # local Ollama. Default "ollama" for every role → no behaviour change. A role
     # silently falls back to Ollama if its provider's API key or model is unset.
-    # Providers: "ollama" | "groq" | "github" | "gemini".
+    # Providers: "ollama" | "groq" | "github" | "gemini" | "openai" | "anthropic"
+    #            | "xai" | "openrouter" | "custom" (any OpenAI-compatible gateway).
     provider_summary: str = "ollama"   # gemma role
     provider_reason: str = "ollama"    # qwen role (synthesis / deep reasoning)
     provider_fast: str = "ollama"      # fast-agent role
     provider_solver: str = "ollama"    # VibeThinker reasoning role
-    provider_embed: str = "ollama"     # embeddings (only "ollama" | "gemini" supported)
+    provider_embed: str = "ollama"     # embeddings ("ollama" | "gemini" | "openai" | "custom")
     provider_vision: str = "ollama"    # image captioning (llava role)
 
     # Provider API keys — SECRETS, supplied via env / .env ONLY (never commit real values).
     groq_api_key: str = ""
     github_models_token: str = ""
     google_genai_api_key: str = ""
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    xai_api_key: str = ""
+    openrouter_api_key: str = ""
+    custom_api_key: str = ""           # optional — local gateways (vLLM/LM Studio) need none
 
     # Provider model names.
     groq_model: str = "llama-3.3-70b-versatile"
     github_models_model: str = "openai/gpt-4.1-mini"
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_embed_model: str = "text-embedding-004"
-    # Vision (multimodal) model names. github/gemini chat models are already multimodal;
-    # Groq needs an explicit vision model (left empty → vision falls back to Ollama).
+    openai_model: str = "gpt-4.1-mini"
+    openai_embed_model: str = "text-embedding-3-small"
+    anthropic_model: str = "claude-sonnet-5"
+    xai_model: str = "grok-4"
+    openrouter_model: str = "meta-llama/llama-3.3-70b-instruct"
+    custom_model: str = ""             # e.g. whatever your vLLM/LM Studio serves
+    custom_embed_model: str = ""
+    # Vision (multimodal) model names. Most flagship chat models are already
+    # multimodal; empty → vision falls back to Ollama for that provider.
     groq_vision_model: str = ""
     github_models_vision_model: str = "openai/gpt-4.1-mini"
     gemini_vision_model: str = "gemini-2.5-flash-lite"
+    openai_vision_model: str = "gpt-4.1-mini"
+    anthropic_vision_model: str = "claude-sonnet-5"
+    xai_vision_model: str = ""
+    openrouter_vision_model: str = ""
+    custom_vision_model: str = ""
 
     # Provider base URLs (OpenAI-compatible gateways; override if a provider moves).
     groq_base_url: str = "https://api.groq.com/openai/v1"
     github_models_base_url: str = "https://models.github.ai/inference"
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    openai_base_url: str = "https://api.openai.com/v1"
+    anthropic_base_url: str = "https://api.anthropic.com/v1"   # OpenAI-compat endpoint
+    xai_base_url: str = "https://api.x.ai/v1"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    custom_base_url: str = ""          # e.g. http://localhost:8001/v1 (vLLM), http://localhost:1234/v1 (LM Studio)
 
     # Reasoning specialist (VibeThinker — AIME-class maths / STEM / code). Used for
     # the *adaptive routing* path only: quantitative questions reason here, then qwen

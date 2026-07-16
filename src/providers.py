@@ -1,17 +1,23 @@
-"""Multi-provider LLM routing (v4 fleet).
+"""Multi-provider LLM routing (v4 fleet, v6 open roster).
 
-Lets each text role (summary / reason / fast / solver) and embeddings be served by a
-hosted, OpenAI-compatible provider instead of local Ollama — Groq (LPU-fast open
-weights), GitHub Models (gpt-4.1 family), or Google Gemini (OpenAI-compat endpoint).
+Lets each text role (summary / reason / fast / solver / vision) and embeddings be
+served by a hosted, OpenAI-compatible provider instead of local Ollama. Clone the
+repo, set `PROVIDER_<ROLE>` + that provider's key/model in `.env`, run — done.
+
+Roster: Groq (LPU-fast open weights), GitHub Models (gpt-4.1 family), Google
+Gemini, OpenAI, Anthropic Claude (OpenAI-compat endpoint), xAI Grok, OpenRouter
+(100+ open-source models behind one key), and `custom` — ANY OpenAI-compatible
+gateway (vLLM, LM Studio, llama.cpp server, Together, Fireworks, DeepSeek,
+Mistral, …) via `CUSTOM_BASE_URL` / `CUSTOM_API_KEY` / `CUSTOM_MODEL`.
 
 Design goals:
 - **Opt-in, per role.** `provider_<role>` defaults to "ollama"; nothing changes until
   a role is pointed at a provider AND that provider's key + model are present.
 - **Graceful fallback.** Missing key/model → `resolve_*` returns None → caller uses
   Ollama. A provider HTTP failure surfaces as an error the caller already handles.
-- **One wire format.** Groq, GitHub Models, and Gemini all speak the OpenAI
-  `/chat/completions` (and `/embeddings`) schema with Bearer auth, so a single thin
-  client covers all three. Keys are read from settings (env), never hard-coded.
+- **One wire format.** Every provider speaks the OpenAI `/chat/completions` (and
+  `/embeddings`) schema with Bearer auth, so a single thin client covers all of
+  them. Keys are read from settings (env), never hard-coded.
 """
 from __future__ import annotations
 
@@ -22,11 +28,57 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-# provider name → (base_url attr, api-key attr, model attr) on Settings.
-_CHAT_PROVIDERS: dict[str, tuple[str, str, str]] = {
-    "groq":   ("groq_base_url", "groq_api_key", "groq_model"),
-    "github": ("github_models_base_url", "github_models_token", "github_models_model"),
-    "gemini": ("gemini_base_url", "google_genai_api_key", "gemini_model"),
+
+@dataclass(frozen=True)
+class ProviderDef:
+    """How to find one provider's config on Settings."""
+    base_url_attr: str
+    key_attr: str
+    chat_model_attr: str
+    vision_model_attr: str | None = None
+    embed_model_attr: str | None = None
+    key_optional: bool = False        # local gateways (vLLM/LM Studio) need no key
+    force_max_tokens: bool = False    # Anthropic's compat endpoint requires max_tokens
+
+
+PROVIDER_DEFS: dict[str, ProviderDef] = {
+    "groq": ProviderDef(
+        "groq_base_url", "groq_api_key", "groq_model",
+        vision_model_attr="groq_vision_model",
+    ),
+    "github": ProviderDef(
+        "github_models_base_url", "github_models_token", "github_models_model",
+        vision_model_attr="github_models_vision_model",
+    ),
+    "gemini": ProviderDef(
+        "gemini_base_url", "google_genai_api_key", "gemini_model",
+        vision_model_attr="gemini_vision_model",
+        embed_model_attr="gemini_embed_model",
+    ),
+    "openai": ProviderDef(
+        "openai_base_url", "openai_api_key", "openai_model",
+        vision_model_attr="openai_vision_model",
+        embed_model_attr="openai_embed_model",
+    ),
+    "anthropic": ProviderDef(
+        "anthropic_base_url", "anthropic_api_key", "anthropic_model",
+        vision_model_attr="anthropic_vision_model",
+        force_max_tokens=True,
+    ),
+    "xai": ProviderDef(
+        "xai_base_url", "xai_api_key", "xai_model",
+        vision_model_attr="xai_vision_model",
+    ),
+    "openrouter": ProviderDef(
+        "openrouter_base_url", "openrouter_api_key", "openrouter_model",
+        vision_model_attr="openrouter_vision_model",
+    ),
+    "custom": ProviderDef(
+        "custom_base_url", "custom_api_key", "custom_model",
+        vision_model_attr="custom_vision_model",
+        embed_model_attr="custom_embed_model",
+        key_optional=True,
+    ),
 }
 
 
@@ -36,16 +88,22 @@ class ProviderSpec:
     base_url: str
     api_key: str
     model: str
+    force_max_tokens: bool = False
 
 
-def _spec(settings, provider: str, model_attr: str) -> ProviderSpec | None:
-    base_attr, key_attr, default_model_attr = _CHAT_PROVIDERS[provider]
-    base_url = (getattr(settings, base_attr, "") or "").rstrip("/")
-    api_key = getattr(settings, key_attr, "") or ""
+def _spec(settings, provider: str, model_attr: str | None) -> ProviderSpec | None:
+    d = PROVIDER_DEFS[provider]
+    if not model_attr:
+        return None
+    base_url = (getattr(settings, d.base_url_attr, "") or "").rstrip("/")
+    api_key = getattr(settings, d.key_attr, "") or ""
     model = getattr(settings, model_attr, "") or ""
-    if not base_url or not api_key or not model:
+    if not base_url or not model or (not api_key and not d.key_optional):
         return None   # incomplete config → caller falls back to Ollama
-    return ProviderSpec(name=provider, base_url=base_url, api_key=api_key, model=model)
+    return ProviderSpec(
+        name=provider, base_url=base_url, api_key=api_key, model=model,
+        force_max_tokens=d.force_max_tokens,
+    )
 
 
 def resolve_chat_provider(settings, role: str) -> ProviderSpec | None:
@@ -54,47 +112,50 @@ def resolve_chat_provider(settings, role: str) -> ProviderSpec | None:
     `role` ∈ {summary, reason, fast, solver}. Unknown providers / "ollama" → None.
     """
     provider = (getattr(settings, f"provider_{role}", "ollama") or "ollama").lower()
-    if provider == "ollama" or provider not in _CHAT_PROVIDERS:
+    if provider == "ollama" or provider not in PROVIDER_DEFS:
         return None
-    # Each provider has one chat model attr; reuse the registry default attr.
-    return _spec(settings, provider, _CHAT_PROVIDERS[provider][2])
+    return _spec(settings, provider, PROVIDER_DEFS[provider].chat_model_attr)
 
 
 def resolve_embed_provider(settings) -> ProviderSpec | None:
-    """Return the embeddings provider, or None to use Ollama. Only Gemini is supported
-    (Groq / GitHub Models do not expose an embeddings endpoint)."""
+    """Return the embeddings provider, or None to use Ollama.
+
+    Supported: gemini, openai, custom (any OpenAI-compatible /embeddings endpoint).
+    Groq / GitHub Models / Anthropic / xAI / OpenRouter don't expose embeddings."""
     provider = (getattr(settings, "provider_embed", "ollama") or "ollama").lower()
-    if provider != "gemini":
+    if provider == "ollama" or provider not in PROVIDER_DEFS:
         return None
-    return _spec(settings, "gemini", "gemini_embed_model")
-
-
-# provider → its vision model attr. Missing/empty model → None (Ollama fallback).
-_VISION_MODEL_ATTRS = {
-    "groq": "groq_vision_model",
-    "github": "github_models_vision_model",
-    "gemini": "gemini_vision_model",
-}
+    return _spec(settings, provider, PROVIDER_DEFS[provider].embed_model_attr)
 
 
 def resolve_vision_provider(settings) -> ProviderSpec | None:
     """Return the vision provider for the llava (image-caption) role, or None for Ollama."""
     provider = (getattr(settings, "provider_vision", "ollama") or "ollama").lower()
-    if provider == "ollama" or provider not in _VISION_MODEL_ATTRS:
+    if provider == "ollama" or provider not in PROVIDER_DEFS:
         return None
-    return _spec(settings, provider, _VISION_MODEL_ATTRS[provider])
+    return _spec(settings, provider, PROVIDER_DEFS[provider].vision_model_attr)
 
 
-def build_chat_payload(model: str, prompt: str, system: str | None, temperature: float) -> dict:
+def build_chat_payload(
+    model: str, prompt: str, system: str | None, temperature: float,
+    *, force_max_tokens: bool = False, max_tokens: int = 4096,
+) -> dict:
     msgs: list[dict] = []
     if system:
         msgs.append({"role": "system", "content": system})
     msgs.append({"role": "user", "content": prompt})
-    return {"model": model, "messages": msgs, "temperature": temperature, "stream": False}
+    payload = {"model": model, "messages": msgs, "temperature": temperature, "stream": False}
+    if force_max_tokens:
+        # Anthropic's OpenAI-compat endpoint requires max_tokens explicitly.
+        payload["max_tokens"] = max_tokens
+    return payload
 
 
 def _auth_headers(api_key: str) -> dict:
-    return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json"}
+    if api_key:  # local OpenAI-compatible gateways (vLLM, LM Studio) need no auth
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
 
 
 async def chat_completion(
@@ -107,7 +168,9 @@ async def chat_completion(
     timeout: float = 120.0,
 ) -> str:
     """OpenAI-compatible chat completion against `spec`. Raises httpx.HTTPError on failure."""
-    payload = build_chat_payload(spec.model, prompt, system, temperature)
+    payload = build_chat_payload(
+        spec.model, prompt, system, temperature, force_max_tokens=spec.force_max_tokens,
+    )
     r = await http.post(
         f"{spec.base_url}/chat/completions",
         json=payload, headers=_auth_headers(spec.api_key), timeout=timeout,
@@ -147,6 +210,8 @@ async def vision_completion(
         "temperature": temperature,
         "stream": False,
     }
+    if spec.force_max_tokens:
+        payload["max_tokens"] = 4096
     r = await http.post(
         f"{spec.base_url}/chat/completions",
         json=payload, headers=_auth_headers(spec.api_key), timeout=timeout,

@@ -88,6 +88,25 @@ def test_append_log_newest_first_date_groups(tmp_path: Path):
     assert text.index("**Query** Question Two") < text.index("**Ingest** Doc One — chunks: 3")
 
 
+def test_stage_or_publish_slug_collision_disambiguates(tmp_path: Path, monkeypatch):
+    from types import SimpleNamespace
+
+    from src.wiki.pages import stage_or_publish
+    settings = SimpleNamespace(wiki_dir=tmp_path, confidence_threshold=0.6)
+
+    fm_a = {"title": "Same Title", "kind": "source", "source": "raw/a.pdf", "confidence": 0.9}
+    path_a, _ = stage_or_publish("Same Title", "body from document A goes here.", fm_a, settings=settings)
+    # Different document, same title → must NOT overwrite A.
+    fm_b = {"title": "Same Title", "kind": "source", "source": "raw/b.pdf", "confidence": 0.9}
+    path_b, _ = stage_or_publish("Same Title", "body from document B goes here.", fm_b, settings=settings)
+    assert path_a != path_b
+    assert "body from document A" in path_a.read_text(encoding="utf-8")
+    # Re-ingesting the SAME source overwrites its own page (no new file).
+    fm_a2 = {"title": "Same Title", "kind": "source", "source": "raw/a.pdf", "confidence": 0.9}
+    path_a2, _ = stage_or_publish("Same Title", "updated body from document A.", fm_a2, settings=settings)
+    assert path_a2 == path_a
+
+
 def test_append_log_preserves_legacy_content(tmp_path: Path):
     legacy = "# Operation Log\n\n## [2026-01-01 10:00] ingest | Old Entry\n\nold details\n"
     (tmp_path / "log.md").write_text(legacy, encoding="utf-8")

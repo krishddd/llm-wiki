@@ -22,6 +22,63 @@ tool catalogue in [`AGENTS.md`](./AGENTS.md).
 
 ---
 
+## Architecture at a glance
+
+```mermaid
+flowchart LR
+    subgraph IN["Input"]
+        DOCS["Raw documents<br/>PDF · DOCX · PPTX · XLSX · HTML · MD"]
+        OKFIN["External OKF bundles<br/>(curated, no LLM pass)"]
+    end
+
+    subgraph ING["Ingest pipeline"]
+        direction TB
+        REDACT["Privacy redaction"] --> PLAN["Agentic chunk plan"]
+        PLAN --> SUMM["Summarise + extract entities/claims"]
+        SUMM --> CONF["Merge + confidence gate"]
+        CONF --> D2Q["Doc2Query questions"]
+    end
+
+    subgraph STORE["Knowledge store"]
+        direction TB
+        WIKI["Markdown wiki = OKF bundle<br/>sources · entities · procedures · episodic"]
+        KG["Knowledge graph<br/>bi-temporal facts, SQLite"]
+        IDX["Indexes<br/>BM25 + dense sub-chunks + hq units"]
+    end
+
+    subgraph QRY["Query pipeline"]
+        direction TB
+        ORCH["Agentic orchestrator"] --> RET["Hybrid retrieval<br/>RRF · rerank · small-to-big · MMR"]
+        RET --> SYNTH["Synthesis + citations<br/>+ NLI claim verification"]
+    end
+
+    SCHED["Scheduler<br/>decay · promote · lint · procedures · topics"]
+
+    DOCS --> ING
+    OKFIN --> WIKI
+    ING --> STORE
+    STORE --> QRY
+    QRY --> ANS["Cited answer"]
+    ANS -- "save-back if conf ≥ 0.80" --> WIKI
+    SCHED --> STORE
+    WIKI -- "export" --> OKFOUT["Shareable OKF bundle"]
+```
+
+Every LLM call is role-based and provider-agnostic — local Ollama by default,
+or any hosted model with one env var (see
+[Bring your own model](#bring-your-own-model--the-provider-fleet)):
+
+```mermaid
+flowchart LR
+    ROLE["LLM role<br/>summary / reason / fast / solver / embed / vision"]
+    ROLE --> Q{"PROVIDER_ROLE set<br/>+ key + model present?"}
+    Q -- "no (default)" --> OLL["Ollama - local models"]
+    Q -- "yes" --> P["OpenAI-compatible provider<br/>Groq / GitHub / Gemini / OpenAI /<br/>Claude / Grok / OpenRouter / custom"]
+    P -- "HTTP error" --> OLL
+```
+
+---
+
 ## Why this exists
 
 Most "chat-with-your-docs" stacks throw documents into a vector store and
@@ -332,37 +389,58 @@ var). Manual one-off runs available via `POST /admin/run/{job_name}`.
 
 Served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`) by default.
 
-### Multi-provider LLM fleet (v4)
+### Bring your own model — the provider fleet
 
-Any text role can be pointed at a hosted, **OpenAI-compatible** provider instead of
-Ollama — useful when you lack local GPU headroom or want a stronger reasoner. Set
-`PROVIDER_<ROLE>` and supply that provider's key + model; the role falls back to
-Ollama automatically if the key/model is missing, and a provider error degrades to
-the existing role fallback. Keys live only in your local `.env` (gitignored) — never
-commit them.
+Every LLM role can be pointed at **any** hosted or local provider that speaks the
+OpenAI wire format. Clone the repo, copy `.env.example` to `.env`, set
+`PROVIDER_<ROLE>` + that provider's key, run — good to go. A role falls back to
+Ollama automatically when its key/model is missing, and a provider HTTP error
+degrades to the existing Ollama role fallback, so misconfiguration never breaks
+the pipeline. Keys live only in your local `.env` (gitignored) — never commit them.
 
-| Provider | Gateway | Typical route |
-|---|---|---|
-| **Groq** | `api.groq.com/openai/v1` | `PROVIDER_FAST=groq` — LPU-fast open-weight models for the fast-agent path |
-| **GitHub Models** | `models.github.ai/inference` | `PROVIDER_REASON=github` — gpt-4.1 family as a deep reasoner |
-| **Google Gemini** | `…/v1beta/openai` | `PROVIDER_SUMMARY=gemini` or `PROVIDER_EMBED=gemini` (only Gemini does embeddings) |
+| Provider | `PROVIDER_<ROLE>=` | Key env var | Default model | Embeddings? |
+|---|---|---|---|---|
+| **Ollama** (default) | `ollama` | — (local) | `qwen3:14b` / `gemma4:e4b` | ✅ `nomic-embed-text` |
+| **Groq** | `groq` | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | — |
+| **GitHub Models** | `github` | `GITHUB_MODELS_TOKEN` | `openai/gpt-4.1-mini` | — |
+| **Google Gemini** | `gemini` | `GOOGLE_GENAI_API_KEY` | `gemini-2.5-flash-lite` | ✅ `text-embedding-004` |
+| **OpenAI** | `openai` | `OPENAI_API_KEY` | `gpt-4.1-mini` | ✅ `text-embedding-3-small` |
+| **Anthropic Claude** | `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-5` | — |
+| **xAI Grok** | `xai` | `XAI_API_KEY` | `grok-4` | — |
+| **OpenRouter** | `openrouter` | `OPENROUTER_API_KEY` | `meta-llama/llama-3.3-70b-instruct` (100+ OSS models, one key) | — |
+| **Custom / self-hosted** | `custom` | `CUSTOM_API_KEY` (optional) | `CUSTOM_MODEL` @ `CUSTOM_BASE_URL` | ✅ `CUSTOM_EMBED_MODEL` |
+
+`custom` covers **any OpenAI-compatible gateway**: vLLM (`http://localhost:8001/v1`),
+LM Studio (`http://localhost:1234/v1`), llama.cpp server, Together, Fireworks,
+DeepSeek, Mistral La Plateforme, … — no code changes, no API key needed for local
+gateways.
 
 ```bash
-# Full three-provider fleet — Groq + GitHub Models + Gemini, no local Ollama needed
-PROVIDER_FAST=groq       GROQ_API_KEY=...            GROQ_MODEL=llama-3.3-70b-versatile
-PROVIDER_REASON=github   GITHUB_MODELS_TOKEN=...     GITHUB_MODELS_MODEL=openai/gpt-4.1-mini
-PROVIDER_SUMMARY=gemini  GOOGLE_GENAI_API_KEY=...    GEMINI_MODEL=gemini-2.5-flash-lite
-PROVIDER_EMBED=gemini                                GEMINI_EMBED_MODEL=text-embedding-004
+# Example mixed fleets (set in .env):
+
+# Claude reasons, Groq handles the fast path, everything else local:
+PROVIDER_REASON=anthropic   ANTHROPIC_API_KEY=sk-ant-...
+PROVIDER_FAST=groq          GROQ_API_KEY=gsk_...
+
+# Fully hosted, zero local GPU:
+PROVIDER_REASON=openai      OPENAI_API_KEY=sk-...
+PROVIDER_SUMMARY=gemini     GOOGLE_GENAI_API_KEY=...
+PROVIDER_EMBED=openai
+PROVIDER_FAST=xai           XAI_API_KEY=xai-...
+
+# Your own vLLM box serving an open-source model:
+PROVIDER_REASON=custom      CUSTOM_BASE_URL=http://localhost:8001/v1  CUSTOM_MODEL=qwen2.5-72b-instruct
 ```
 
-Roles: `PROVIDER_SUMMARY` (gemma), `PROVIDER_REASON` (qwen/synthesis),
-`PROVIDER_FAST` (fast-agent), `PROVIDER_SOLVER` (VibeThinker), `PROVIDER_VISION`
-(image captions via OpenAI `image_url`). All default to `ollama`.
+Roles: `PROVIDER_SUMMARY` (summarise/extract), `PROVIDER_REASON` (synthesis / deep
+reasoning), `PROVIDER_FAST` (fast-agent), `PROVIDER_SOLVER` (quantitative
+specialist), `PROVIDER_EMBED` (embeddings), `PROVIDER_VISION` (image captions via
+OpenAI `image_url`). All default to `ollama`.
 
-> **Embeddings — Gemini only.** Groq and GitHub Models do not expose an embeddings
-> endpoint, so `PROVIDER_EMBED` accepts only `ollama` or `gemini`. Set
-> `PROVIDER_EMBED=gemini` + `GOOGLE_GENAI_API_KEY` to embed via
-> `text-embedding-004`; any other value falls back to the local Ollama embedder.
+> **Embeddings** are supported by `ollama`, `gemini`, `openai`, and `custom` —
+> the other providers expose no embeddings endpoint and fall back to Ollama.
+> **Heads-up:** switching embedders mid-corpus requires a re-index (two embedders
+> = two incompatible vector spaces).
 
 ---
 
@@ -372,12 +450,16 @@ Roles: `PROVIDER_SUMMARY` (gemma), `PROVIDER_REASON` (qwen/synthesis),
 git clone https://github.com/krishddd/llm-wiki.git
 cd llm-wiki
 pip install -r requirements.txt
-cp .env.example .env  # set OLLAMA_HOST etc.
+cp .env.example .env
 
-# Pull required models
+# Option A — fully local (default): pull the Ollama models
 ollama pull qwen3:14b
 ollama pull gemma4:e4b
 ollama pull nomic-embed-text
+
+# Option B — bring your own model: no Ollama needed, just set a provider in .env
+#   PROVIDER_REASON=anthropic  ANTHROPIC_API_KEY=sk-ant-...   (or openai / gemini /
+#   groq / github / xai / openrouter / custom — see the provider table above)
 
 # Run the API
 uvicorn src.api:app --reload --port 8000
