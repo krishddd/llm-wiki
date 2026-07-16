@@ -246,8 +246,9 @@ async def detect_procedures(
         body_lines.append("## Anchor pages")
         body_lines.append("")
         for src in sources:
-            stem = Path(str(src)).stem
-            body_lines.append(f"- [[{stem}]]")
+            # OKF bundle-relative markdown link (src is a wiki-relative page id).
+            rel = str(src).replace("\\", "/")
+            body_lines.append(f"- [{Path(rel).stem}](/{rel})")
         body = "\n".join(body_lines)
 
         fm = {

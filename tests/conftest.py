@@ -41,6 +41,11 @@ class FakeOllama:
         try:
             await asyncio.sleep(0.01)
             self.call_log.append({"model": "gemma", "len": len(prompt)})
+            if "questions that this document" in prompt:
+                return (
+                    '{"questions":["What is Docker used for?","How does FastAPI '
+                    'serve the wiki?","Which model powers reasoning?"]}'
+                )
             if "Extract named entities" in prompt:
                 return (
                     '{"entities":[{"name":"Docker","type":"CONCEPT"},'
@@ -48,7 +53,11 @@ class FakeOllama:
                     '"relations":[{"src":"Docker","src_type":"CONCEPT","dst":"FastAPI","dst_type":"CONCEPT",'
                     '"rel_type":"RELATES_TO"}]}'
                 )
-            return "Chunk summary covering docker, fastapi, and qwen."
+            return (
+                "Chunk summary covering docker, fastapi, and qwen. "
+                "The document explains how Docker containers host the FastAPI service "
+                "and how the qwen model integrates with the LLM wiki pipeline."
+            )
         finally:
             await self._release()
 
@@ -57,7 +66,11 @@ class FakeOllama:
         if "confidence" in (system or "") or "confidence" in prompt.lower()[:200]:
             return '{"confidence": 0.82, "reason": "faithful summary"}'
         if "merging partial" in prompt:
-            return "Merged summary: docker, fastapi, qwen integration for the wiki."
+            return (
+                "Merged summary: docker, fastapi, qwen integration for the wiki. "
+                "Docker containers run the FastAPI application while the qwen model "
+                "provides reasoning and synthesis for the knowledge pipeline."
+            )
         if '"answer"' in (system or ""):
             return (
                 '{"answer":"Docker and FastAPI are discussed [Sample Page].",'

@@ -11,6 +11,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
+from .chunks import focused_text, matched_chunk_indices
 from .mmr import MMRCandidate, mmr_select
 from .reranker import RerankCandidate, rerank
 
@@ -65,6 +66,8 @@ async def hybrid_search(
     hyde_text: str | None = None,
     use_mmr: bool = True,
     mmr_lambda: float = 0.7,
+    use_chunk_context: bool = True,
+    synth_downweight: float = 0.85,
 ) -> list[RetrievedPage]:
     """End-to-end retrieval.
 
@@ -73,12 +76,19 @@ async def hybrid_search(
     - `graph` (optional) exposes `neighbors_of_pages(page_ids, hops) -> list[str]`.
     - `hyde_text` (optional): hypothetical answer text; embedded and used for the dense leg.
     - `use_mmr`: final MMR diversification over the reranked+expanded set.
+    - `use_chunk_context`: small-to-big — rerank/return the matched sub-chunks (plus
+      neighbours) instead of the first 4000 chars of the parent page.
+    - `synth_downweight`: score multiplier (<1) applied to machine-written pages
+      (kind ∈ synthesis/promoted/crystallized) so save-back syntheses never outrank
+      the primary sources they were derived from (anti-feedback-loop guardrail).
     """
     bm25_task = asyncio.create_task(bm25.search(query, k=top_k_bm25))
     dense_task = asyncio.create_task(_dense_search(dense, query, hyde_text, top_k_dense))
     bm25_ids, dense_ids = await asyncio.gather(bm25_task, dense_task)
 
-    # Hierarchical chunk mapping: map chunk IDs back to parent page IDs
+    # Hierarchical chunk mapping: map chunk IDs back to parent page IDs, but KEEP
+    # the matched sub-chunk offsets so we can hand the reranker/synthesiser the
+    # text that actually matched (small-to-big retrieval) instead of page[:4000].
     parent_bm25 = []
     seen_bm25 = set()
     for cid in bm25_ids:
@@ -95,6 +105,8 @@ async def hybrid_search(
             seen_dense.add(pid)
             parent_dense.append(pid)
 
+    chunk_hits = matched_chunk_indices(list(bm25_ids) + list(dense_ids)) if use_chunk_context else {}
+
     fused = _rrf_fuse([parent_bm25, parent_dense])[:top_k_rrf]
     if not fused:
         return []
@@ -102,8 +114,15 @@ async def hybrid_search(
     candidates = []
     for page_id, _ in fused:
         text = await page_store.get_text(page_id)
-        if text:
-            candidates.append(RerankCandidate(page_id=page_id, text=text[:4000]))
+        if not text:
+            continue
+        cand_text = ""
+        idxs = chunk_hits.get(page_id) or []
+        if idxs:
+            meta = await page_store.get_meta(page_id)
+            title = str((meta or {}).get("title") or page_id)
+            cand_text = focused_text(title, text, meta, idxs, max_chars=4000)
+        candidates.append(RerankCandidate(page_id=page_id, text=cand_text or text[:4000]))
 
     # Rerank a slightly wider set when MMR is enabled, so MMR has room to diversify.
     rerank_k = max(top_k_rerank * 2, top_k_rerank + 5) if use_mmr else top_k_rerank
@@ -121,6 +140,18 @@ async def hybrid_search(
                     extra_cands.append(RerankCandidate(page_id=pid, text=text[:4000]))
             combined = [c for c, _ in top] + extra_cands
             top = rerank(query, combined, k=rerank_k)
+
+    # Anti-feedback-loop: down-weight machine-written pages so a save-back synthesis
+    # never outranks the primary sources it was derived from.
+    if synth_downweight < 1.0 and top:
+        _MACHINE_KINDS = ("synthesis", "promoted", "crystallized")
+        adjusted: list[tuple[RerankCandidate, float]] = []
+        for c, s in top:
+            meta = await page_store.get_meta(c.page_id)
+            if str((meta or {}).get("kind", "")).lower() in _MACHINE_KINDS:
+                s = s * synth_downweight
+            adjusted.append((c, s))
+        top = sorted(adjusted, key=lambda cs: cs[1], reverse=True)
 
     # Final step: MMR diversification down to top_k_rerank.
     if use_mmr and len(top) > top_k_rerank:
