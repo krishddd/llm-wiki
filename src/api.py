@@ -45,7 +45,15 @@ import contextlib
 
 from fastapi.staticfiles import StaticFiles
 
-app.mount("/dashboard", StaticFiles(directory="src/static", html=True), name="static")
+# Mount the dashboard from a path relative to THIS file, not the process CWD, so
+# `uvicorn src.api:app` works from any working directory. Skip (don't crash) if the
+# static dir isn't present — the API is fully usable without the dashboard.
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/dashboard", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
+else:
+    log.warning("dashboard static dir not found — /dashboard disabled",
+                extra={"metadata": {"path": str(_STATIC_DIR)}})
 
 # Agentic RAG layer — additive, new routes only (POST /query/agentic, GET /agentic/health).
 from .api_agentic import router as _agentic_router  # noqa: E402
@@ -223,6 +231,37 @@ class QueryResponse(BaseModel):
 
 # ───── Endpoints ─────
 
+def _subsystems(s) -> dict[str, Any]:
+    """Best-effort snapshot of which optional backends/providers are active.
+    Never raises — every probe is guarded so /health stays a reliable diagnostic."""
+    info: dict[str, Any] = {}
+    # Dense vector backend (chromadb if it loaded, else the numpy fallback).
+    with contextlib.suppress(Exception):
+        dense = getattr(state, "dense", None)
+        info["dense_backend"] = getattr(dense, "backend", "unknown") if dense is not None else "not_initialised"
+    # Cross-encoder reranker (flashrank) vs RRF-order passthrough.
+    try:
+        import flashrank  # noqa: F401
+        info["reranker"] = "flashrank"
+    except Exception:
+        info["reranker"] = "rrf-passthrough (flashrank not installed)"
+    # Background scheduler.
+    with contextlib.suppress(Exception):
+        sched = getattr(state, "scheduler", None)
+        info["scheduler"] = (
+            f"{len(sched.get_jobs())} jobs" if sched is not None else "disabled/unavailable"
+        )
+    # Which roles are routed to a hosted provider vs local Ollama.
+    with contextlib.suppress(Exception):
+        routed = {
+            role: getattr(s, f"provider_{role}", "ollama")
+            for role in ("summary", "reason", "fast", "solver", "embed", "vision")
+            if (getattr(s, f"provider_{role}", "ollama") or "ollama") != "ollama"
+        }
+        info["hosted_providers"] = routed or "none (all roles local Ollama)"
+    return info
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     s = get_settings()
@@ -235,13 +274,19 @@ async def health() -> dict[str, Any]:
         log.warning("ollama unreachable", extra={"metadata": {"error": str(e)}})
     required = s.required_models()
     missing = [m for m in required if m not in models]
+    subsystems = _subsystems(s)
+    # "ok" reflects whether the app can actually answer: Ollama reachable with its
+    # required models, OR every LLM role routed to a hosted provider (then Ollama
+    # models are irrelevant).
+    all_roles_hosted = subsystems.get("hosted_providers") not in (None, "none (all roles local Ollama)")
     return {
-        "ok": reachable and not missing,
+        "ok": (reachable and not missing) or all_roles_hosted,
         "ollama_reachable": reachable,
         "ollama_host": s.ollama_host,
         "models_available": models,
         "models_required": required,
         "models_missing": missing,
+        "subsystems": subsystems,
         "correlation_id": correlation_id_ctx.get(),
     }
 
