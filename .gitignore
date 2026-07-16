@@ -53,5 +53,7 @@ service-account*.json
 *.docx
 *.pdf
 
-# eval harness scratch indexes
+# eval harness — scratch indexes + generated golden set / results are local artifacts
 eval/.work/
+eval/golden.jsonl
+eval/results-*.json

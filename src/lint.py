@@ -229,7 +229,7 @@ async def lint_wiki(
                 "auto_fix": auto_fix, "fixes": {}}
 
     joined = "\n\n---\n\n".join(text for _, text in pages)
-    raw = await c.qwen(f"WIKI PAGES:\n{joined}", system=LINT_SYSTEM, temperature=0.2)
+    raw = await c.reason(f"WIKI PAGES:\n{joined}", system=LINT_SYSTEM, temperature=0.2)
     data = _extract_json(raw) or {}
 
     orphans = data.get("orphans", []) or []

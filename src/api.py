@@ -528,7 +528,7 @@ async def session_crystallize(body: CrystallizeBody) -> dict[str, Any]:
     prompt = "EXPLORATION EPISODES:\n\n" + "\n".join(lines) + "\n\nDistil the thread."
     client = get_client()
     try:
-        raw = await client.qwen(prompt, system=CRYSTALLIZE_SYSTEM, temperature=0.2)
+        raw = await client.reason(prompt, system=CRYSTALLIZE_SYSTEM, temperature=0.2)
     except Exception as e:
         return {"ok": False, "error": f"crystallize LLM call failed: {str(e)[:200]}"}
 

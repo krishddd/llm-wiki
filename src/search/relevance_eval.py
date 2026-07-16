@@ -83,7 +83,7 @@ async def evaluate_one(
     )
     try:
         async with sem:
-            raw = await client.gemma(prompt, system=_EVAL_SYSTEM, temperature=0.1)
+            raw = await client.summarize(prompt, system=_EVAL_SYSTEM, temperature=0.1)
         verdict, score = _parse_verdict(raw)
     except Exception as e:
         log.debug("relevance eval failed", extra={"metadata": {"page": page_id, "error": str(e)[:120]}})

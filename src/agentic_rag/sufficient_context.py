@@ -138,7 +138,7 @@ async def evaluate_sufficient_context(
     )
 
     try:
-        raw = await client.qwen(prompt, system=SCA_SYSTEM, temperature=0.1)
+        raw = await client.reason(prompt, system=SCA_SYSTEM, temperature=0.1)
     except Exception as e:
         log.warning("SCA LLM call failed; defaulting to sufficient=False",
                     extra={"metadata": {"error": str(e)[:200]}})
@@ -206,7 +206,7 @@ async def quick_draft(
     snippet_block = _format_snippets(snippets, max_chars_each=500, max_snippets=8)
     prompt = f"QUESTION:\n{question}\n\nSNIPPETS:\n{snippet_block}\n\nDraft now (3-5 sentences):"
     try:
-        text = await client.gemma(prompt, system=QUICK_DRAFT_SYSTEM, temperature=0.2)
+        text = await client.summarize(prompt, system=QUICK_DRAFT_SYSTEM, temperature=0.2)
     except Exception as e:
         log.debug("quick_draft failed", extra={"metadata": {"error": str(e)[:120]}})
         return ""

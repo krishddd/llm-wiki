@@ -161,7 +161,7 @@ async def build_topic_pages(
     for cluster in clusters:
         listing = "\n".join(f"- {titles[pid]}: {descs[pid][:200]}" for pid in cluster)
         try:
-            raw = await client.qwen(f"PAGES IN CLUSTER:\n{listing}", system=_TOPIC_SYSTEM, temperature=0.3)
+            raw = await client.reason(f"PAGES IN CLUSTER:\n{listing}", system=_TOPIC_SYSTEM, temperature=0.3)
         except Exception as e:
             log.warning("topic summarise failed", extra={"metadata": {"error": str(e)[:160]}})
             continue

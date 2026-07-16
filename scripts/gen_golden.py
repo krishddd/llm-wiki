@@ -82,7 +82,7 @@ async def _run(args) -> None:
     for i, (pid, title, domain, content) in enumerate(sample, start=1):
         prompt = f"PAGE TITLE: {title}\n\nPAGE CONTENT:\n{content}"
         try:
-            raw = await client.gemma(prompt, system=_GOLDEN_SYSTEM, temperature=0.4)
+            raw = await client.summarize(prompt, system=_GOLDEN_SYSTEM, temperature=0.4)
         except Exception as e:
             print(f"  [{i}] {pid}: LLM call failed ({str(e)[:80]})")
             continue

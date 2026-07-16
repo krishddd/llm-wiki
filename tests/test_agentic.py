@@ -30,25 +30,25 @@ class FakePage:
 
 
 class ProgrammableOllama:
-    """Returns the next queued response per `client.qwen` / `client.gemma` call."""
+    """Returns the next queued response per `client.reason` / `client.summarize` call."""
 
-    def __init__(self, qwen_responses=None, gemma_responses=None):
-        self.qwen_responses = list(qwen_responses or [])
-        self.gemma_responses = list(gemma_responses or [])
-        self.qwen_calls: list[str] = []
-        self.gemma_calls: list[str] = []
+    def __init__(self, reason_responses=None, summarize_responses=None):
+        self.reason_responses = list(reason_responses or [])
+        self.summarize_responses = list(summarize_responses or [])
+        self.reason_calls: list[str] = []
+        self.summarize_calls: list[str] = []
 
-    async def qwen(self, prompt, system=None, *, temperature=0.3):
-        self.qwen_calls.append(prompt)
-        if self.qwen_responses:
-            return self.qwen_responses.pop(0)
+    async def reason(self, prompt, system=None, *, temperature=0.3):
+        self.reason_calls.append(prompt)
+        if self.reason_responses:
+            return self.reason_responses.pop(0)
         return '{"is_sufficient": true, "coverage_score": 1.0, "reason": "ok",' \
                ' "covered_aspects": [], "missing_aspects": [], "suggested_queries": []}'
 
-    async def gemma(self, prompt, system=None, *, temperature=0.4):
-        self.gemma_calls.append(prompt)
-        if self.gemma_responses:
-            return self.gemma_responses.pop(0)
+    async def summarize(self, prompt, system=None, *, temperature=0.4):
+        self.summarize_calls.append(prompt)
+        if self.summarize_responses:
+            return self.summarize_responses.pop(0)
         return "Quick draft answer."
 
     async def embed(self, text):
@@ -70,7 +70,7 @@ async def test_sca_returns_insufficient_on_empty_snippets():
 
 @pytest.mark.asyncio
 async def test_sca_parses_json_verdict():
-    client = ProgrammableOllama(qwen_responses=[
+    client = ProgrammableOllama(reason_responses=[
         '{"is_sufficient": false, "coverage_score": 0.55,'
         ' "reason": "missing dosing",'
         ' "covered_aspects": ["drug name"],'
@@ -91,7 +91,7 @@ async def test_sca_parses_json_verdict():
 
 @pytest.mark.asyncio
 async def test_sca_demotes_when_missing_but_high_score():
-    client = ProgrammableOllama(qwen_responses=[
+    client = ProgrammableOllama(reason_responses=[
         '{"is_sufficient": true, "coverage_score": 0.95,'
         ' "missing_aspects": ["dosage"], "covered_aspects": [],'
         ' "suggested_queries": []}'
@@ -109,7 +109,7 @@ async def test_sca_demotes_when_missing_but_high_score():
 
 @pytest.mark.asyncio
 async def test_rewriter_uses_llm_and_dedupes():
-    client = ProgrammableOllama(qwen_responses=[
+    client = ProgrammableOllama(reason_responses=[
         '{"queries": ["aspirin dosage adult", "aspirin frequency daily"]}'
     ])
     out = await rewrite_for_gaps(
@@ -128,7 +128,7 @@ async def test_rewriter_uses_llm_and_dedupes():
 @pytest.mark.asyncio
 async def test_rewriter_falls_back_to_sca_suggestions_on_llm_failure():
     class BoomClient(ProgrammableOllama):
-        async def qwen(self, *a, **k):
+        async def reason(self, *a, **k):
             raise RuntimeError("ollama down")
 
     out = await rewrite_for_gaps(
@@ -150,12 +150,12 @@ async def test_planner_factual_uses_trivial_plan():
     assert len(plan.sub_tasks) == 1
     assert plan.is_multi_hop is False
     # No LLM call required for factual fast path.
-    assert client.qwen_calls == []
+    assert client.reason_calls == []
 
 
 @pytest.mark.asyncio
 async def test_planner_parses_multi_hop_plan():
-    client = ProgrammableOllama(qwen_responses=[
+    client = ProgrammableOllama(reason_responses=[
         '{"sub_tasks": ['
         '{"query": "Project X server", "strategy": "keyword_search",'
         ' "depends_on": [], "reason": "find server id", "priority": 1},'
@@ -245,7 +245,7 @@ async def test_planner_preserves_depends_on_indices_under_unsorted_priorities():
     silently misaligned `depends_on` indices that point into the original
     list position. After the fix, sub-tasks must appear in declared order
     even when priorities are out of order."""
-    client = ProgrammableOllama(qwen_responses=[
+    client = ProgrammableOllama(reason_responses=[
         '{"sub_tasks": ['
         '{"query": "first lookup", "strategy": "keyword_search",'
         ' "depends_on": [], "reason": "", "priority": 5},'
@@ -297,11 +297,11 @@ async def test_agentic_answer_one_iteration_sufficient():
     })
     # SCA returns sufficient on first iteration.
     engine.c = ProgrammableOllama(
-        qwen_responses=[
+        reason_responses=[
             '{"is_sufficient": true, "coverage_score": 0.95, "reason": "ok",'
             ' "covered_aspects": ["x"], "missing_aspects": [], "suggested_queries": []}'
         ],
-        gemma_responses=["Draft: X is foo."],
+        summarize_responses=["Draft: X is foo."],
     )
 
     result = await agentic_answer(
@@ -329,7 +329,7 @@ async def test_agentic_answer_iterates_when_insufficient():
         ],
     })
     engine.c = ProgrammableOllama(
-        qwen_responses=[
+        reason_responses=[
             # iteration 0 — insufficient
             '{"is_sufficient": false, "coverage_score": 0.4, "reason": "missing specs",'
             ' "covered_aspects": ["server id"], "missing_aspects": ["hardware specs"],'
@@ -341,7 +341,7 @@ async def test_agentic_answer_iterates_when_insufficient():
             ' "covered_aspects": ["server id","specs"], "missing_aspects": [],'
             ' "suggested_queries": []}',
         ],
-        gemma_responses=["draft 1", "draft 2"],
+        summarize_responses=["draft 1", "draft 2"],
     )
 
     result = await agentic_answer(

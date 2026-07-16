@@ -117,9 +117,10 @@ class OllamaClient:
     ) -> str:
         """Dispatch a text role to its configured provider, or Ollama by default.
 
-        Hosted providers (Groq / GitHub Models / Gemini) are OpenAI-compatible; a
-        provider HTTP error is re-raised as OllamaError so existing role fallbacks
-        (e.g. qwen→llama) still apply. Missing key/model → transparent Ollama path.
+        Hosted providers (Groq / GitHub / Gemini / OpenAI / Anthropic / xAI /
+        OpenRouter / custom) are OpenAI-compatible; a provider HTTP error is
+        re-raised as OllamaError so existing role fallbacks (e.g. reason→fast)
+        still apply. Missing key/model → transparent Ollama path.
         """
         from .providers import chat_completion, resolve_chat_provider
         spec = resolve_chat_provider(self.settings, role)
@@ -133,10 +134,18 @@ class OllamaClient:
         except httpx.HTTPError as e:
             raise OllamaError(f"{spec.name} chat failed for {spec.model}: {type(e).__name__}: {e!s}") from e
 
-    async def gemma(self, prompt: str, system: str | None = None, *, temperature: float = 0.4) -> str:
+    # ── Role methods ─────────────────────────────────────────────────────────
+    # Each method is a ROLE, not a model. The concrete model is chosen at call
+    # time from settings (`model_<role>` on Ollama, or the `provider_<role>`
+    # hosted model). Swapping models is pure configuration — no code changes.
+    #   summarize → summary role   reason → deep-reasoning/synthesis role
+    #   fast      → fast-agent role  vision → image-caption role
+    #   solver    → quantitative specialist   embed → embeddings
+
+    async def summarize(self, prompt: str, system: str | None = None, *, temperature: float = 0.4) -> str:
         return await self._role_chat("summary", self.settings.model_summary, prompt, system, temperature=temperature)
 
-    async def qwen(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
+    async def reason(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
         try:
             return await self._role_chat("reason", self.settings.model_reason, prompt, system, temperature=temperature)
         except OllamaError as e:
@@ -145,15 +154,14 @@ class OllamaClient:
             # retrying the same overloaded model.
             if self.settings.model_fast and self.settings.model_fast != self.settings.model_reason:
                 log.warning(
-                    f"qwen failed, falling back to {self.settings.model_fast}",
+                    f"reason role failed, falling back to {self.settings.model_fast}",
                     extra={"metadata": {"error": str(e)}},
                 )
-                return await self.llama(prompt, system, temperature=temperature)
+                return await self.fast(prompt, system, temperature=temperature)
             raise
 
-    async def llama(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
-        # Named "llama" for historical reasons — actually dispatches to the fast role
-        # (model_fast on Ollama, or the provider_fast hosted model, e.g. Groq).
+    async def fast(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
+        # Fast-agent role: model_fast on Ollama, or the provider_fast hosted model.
         return await self._role_chat(
             "fast", self.settings.model_fast, prompt, system,
             temperature=temperature, timeout=self.settings.llm_fast_timeout,
@@ -174,7 +182,7 @@ class OllamaClient:
         raw = await self._role_chat("solver", self.settings.model_solver, prompt, system, temperature=temp)
         return strip_think(raw)
 
-    async def llava(self, prompt: str, image_path: str | Path) -> str:
+    async def vision(self, prompt: str, image_path: str | Path) -> str:
         img_b64 = base64.b64encode(Path(image_path).read_bytes()).decode()
         from .providers import resolve_vision_provider, vision_completion
         spec = resolve_vision_provider(self.settings)

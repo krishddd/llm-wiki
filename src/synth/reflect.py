@@ -73,7 +73,7 @@ async def critique_answer(
         "Critique the draft."
     )
     try:
-        raw = await client.gemma(prompt, system=_CRITIQUE_SYSTEM, temperature=0.2)
+        raw = await client.summarize(prompt, system=_CRITIQUE_SYSTEM, temperature=0.2)
         d = _extract(raw)
     except Exception as e:
         log.debug("critique failed", extra={"metadata": {"error": str(e)[:120]}})

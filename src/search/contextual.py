@@ -51,7 +51,7 @@ async def contextualize_chunk(
     fallback = f"From '{doc_title}':"
     try:
         async with sem:
-            text = await client.gemma(
+            text = await client.summarize(
                 _build_prompt(doc_title, full_doc_excerpt, chunk),
                 system=CONTEXTUALIZE_SYSTEM,
                 temperature=0.2,

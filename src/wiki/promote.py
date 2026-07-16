@@ -237,7 +237,7 @@ async def promote_episodic_to_semantic(
             "Consolidate."
         )
         try:
-            raw = await client.qwen(prompt, system=_PROMOTE_SYSTEM, temperature=0.2)
+            raw = await client.reason(prompt, system=_PROMOTE_SYSTEM, temperature=0.2)
             parsed = _extract_json(raw) or {}
         except Exception as e:
             log.debug("promote LLM call failed", extra={"metadata": {"error": str(e)[:160]}})

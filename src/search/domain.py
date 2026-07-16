@@ -113,7 +113,7 @@ _DOMAIN_SYSTEM = (
 
 async def classify_domain_llm(client: OllamaClient, text: str) -> Domain:
     try:
-        raw = await client.gemma(text[:2000], system=_DOMAIN_SYSTEM, temperature=0.1)
+        raw = await client.summarize(text[:2000], system=_DOMAIN_SYSTEM, temperature=0.1)
         s = re.sub(r"^```(?:json)?\n?", "", (raw or "").strip())
         s = re.sub(r"\n?```$", "", s)
         m = re.search(r"\{.*\}", s, re.DOTALL)
