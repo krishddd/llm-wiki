@@ -280,7 +280,7 @@ class QueryEngine:
     async def _hyde(self, question: str) -> str | None:
         """Generate a hypothetical answer to use as the dense-embedding seed."""
         try:
-            text = await self.c.qwen(question, system=HYDE_SYSTEM, temperature=0.5)
+            text = await self.c.reason(question, system=HYDE_SYSTEM, temperature=0.5)
             return text.strip() if text else None
         except Exception as e:
             log.warning("HyDE generation failed, falling back to raw query", extra={"metadata": {"error": str(e)[:200]}})
@@ -291,7 +291,7 @@ class QueryEngine:
         if not DECOMPOSE_TRIGGERS.search(question) or len(question) < 25:
             return [question]
         try:
-            raw = await self.c.qwen(question, system=DECOMPOSE_SYSTEM, temperature=0.1)
+            raw = await self.c.reason(question, system=DECOMPOSE_SYSTEM, temperature=0.1)
             data = _extract_json(raw) or {}
             subs = [str(q).strip() for q in (data.get("sub_queries") or []) if str(q).strip()]
             return subs[:3] if subs else [question]
@@ -640,11 +640,11 @@ class QueryEngine:
                     extra={"metadata": {"error": str(e)[:200]}},
                 )
 
-        raw = await self.c.qwen(prompt, system=SYNTH_SYSTEM, temperature=0.2)
+        raw = await self.c.reason(prompt, system=SYNTH_SYSTEM, temperature=0.2)
         data = _extract_json(raw)
         if data is None:
             fixup = f"Your previous reply was not valid JSON. Reply ONLY with valid JSON now.\n\n{raw}"
-            raw = await self.c.qwen(fixup, system=SYNTH_SYSTEM, temperature=0.1)
+            raw = await self.c.reason(fixup, system=SYNTH_SYSTEM, temperature=0.1)
             data = _extract_json(raw) or {}
 
         answer_text = str(data.get("answer", raw))[:8000]
@@ -701,7 +701,7 @@ class QueryEngine:
                         "Produce an improved answer following the formatting rules. JSON only."
                     )
                     try:
-                        raw2 = await self.c.qwen(refine_prompt, system=SYNTH_SYSTEM, temperature=0.2)
+                        raw2 = await self.c.reason(refine_prompt, system=SYNTH_SYSTEM, temperature=0.2)
                         data2 = _extract_json(raw2)
                         if data2 and data2.get("answer"):
                             answer_text = str(data2.get("answer", answer_text))[:8000]

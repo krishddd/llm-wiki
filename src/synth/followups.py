@@ -44,7 +44,7 @@ async def suggest_followups(client: OllamaClient, question: str, answer_summary:
         "Suggest 2-3 follow-up questions."
     )
     try:
-        raw = await client.qwen(prompt, system=_FOLLOWUP_SYSTEM, temperature=0.4)
+        raw = await client.reason(prompt, system=_FOLLOWUP_SYSTEM, temperature=0.4)
         return _extract_json_array(raw)
     except Exception as e:
         log.debug("followup suggestion failed", extra={"metadata": {"error": str(e)[:120]}})

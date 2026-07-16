@@ -139,7 +139,7 @@ class _Cit:
 
 
 class _JudgeClient:
-    async def gemma(self, prompt, system=None, *, temperature=0.1):
+    async def summarize(self, prompt, system=None, *, temperature=0.1):
         return '{"verdicts":[{"id":1,"verdict":"supported"},{"id":2,"verdict":"unsupported"}]}'
 
 
@@ -177,7 +177,7 @@ class _TopicClient:
         # deterministic 2-d embedding: docker docs → x-axis, biology docs → y-axis
         return [1.0, 0.0] if "docker" in text.lower() else [0.0, 1.0]
 
-    async def qwen(self, prompt, system=None, *, temperature=0.3):
+    async def reason(self, prompt, system=None, *, temperature=0.3):
         return (
             '{"title":"Container Infrastructure",'
             '"summary":"' + ("These pages cover container tooling and deployment. " * 8).strip() + '",'

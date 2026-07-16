@@ -43,7 +43,7 @@ async def paraphrase(client: OllamaClient, question: str, *, max_paraphrases: in
     if not question or len(question) < 10:
         return [question]
     try:
-        raw = await client.qwen(question, system=_PARAPHRASE_SYSTEM, temperature=0.5)
+        raw = await client.reason(question, system=_PARAPHRASE_SYSTEM, temperature=0.5)
         paras = _extract(raw)[:max_paraphrases]
     except Exception as e:
         log.debug("paraphrase failed", extra={"metadata": {"error": str(e)[:120]}})

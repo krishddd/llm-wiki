@@ -88,7 +88,7 @@ _INTENT_SYSTEM = (
 
 async def classify_intent_llm(client: OllamaClient, question: str) -> Intent:
     try:
-        raw = await client.gemma(question, system=_INTENT_SYSTEM, temperature=0.1)
+        raw = await client.summarize(question, system=_INTENT_SYSTEM, temperature=0.1)
         s = re.sub(r"^```(?:json)?\n?", "", (raw or "").strip())
         s = re.sub(r"\n?```$", "", s)
         m = re.search(r"\{.*\}", s, re.DOTALL)

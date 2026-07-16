@@ -141,7 +141,7 @@ class Ingestor:
     async def _summarise_chunk(self, chunk: str) -> str:
         try:
             async with self._sem:
-                return await self.c.gemma(SUMMARY_PROMPT + chunk)
+                return await self.c.summarize(SUMMARY_PROMPT + chunk)
         except Exception as e:
             log.warning("summarise chunk failed, using raw excerpt", extra={"metadata": {"error": str(e)[:200]}})
             # Fall back to a raw excerpt so the doc still makes it through.
@@ -150,7 +150,7 @@ class Ingestor:
     async def _extract_chunk(self, chunk: str) -> dict:
         try:
             async with self._sem:
-                raw = await self.c.gemma(ENTITY_PROMPT + chunk[:5000], temperature=0.1)
+                raw = await self.c.summarize(ENTITY_PROMPT + chunk[:5000], temperature=0.1)
             return _extract_json(raw) or {"entities": [], "relations": []}
         except Exception as e:
             log.warning("extract chunk failed, skipping", extra={"metadata": {"error": str(e)[:200]}})
@@ -178,7 +178,7 @@ class Ingestor:
             trimmed = [p[:per_part_budget] for p in parts]
             joined = "\n\n---\n\n".join(trimmed)
         try:
-            out = await self.c.qwen(MERGE_PROMPT + joined)
+            out = await self.c.reason(MERGE_PROMPT + joined)
             if out and len(out.strip()) > 100:
                 return out.strip()
             log.warning("merge returned empty/short, retrying with shorter input")
@@ -189,7 +189,7 @@ class Ingestor:
         per_part = max(200, 6000 // max(len(parts), 1))
         small_joined = "\n\n---\n\n".join(p[:per_part] for p in parts)
         try:
-            out = await self.c.qwen(MERGE_PROMPT + small_joined)
+            out = await self.c.reason(MERGE_PROMPT + small_joined)
             if out and len(out.strip()) > 100:
                 return out.strip()
         except Exception as e:
@@ -250,7 +250,7 @@ class Ingestor:
         ent_lines = "\n".join(f"- {e.name} ({e.type})" for e in entities[:30])
         prompt = CLAIM_PROMPT.format(entities=ent_lines, summary=summary[:4000])
         try:
-            raw = await self.c.qwen(prompt, temperature=0.1)
+            raw = await self.c.reason(prompt, temperature=0.1)
         except Exception as e:
             log.debug("claim extraction failed", extra={"metadata": {"error": str(e)[:160]}})
             return []
@@ -408,7 +408,7 @@ class Ingestor:
                     continue
                 old_text = other_path.read_text(encoding="utf-8")[:3000]
                 prompt = CONTRADICTION_PROMPT.format(new=summary[:2500], old=old_text)
-                raw = await self.c.qwen(prompt, temperature=0.1)
+                raw = await self.c.reason(prompt, temperature=0.1)
                 data = _extract_json(raw) or {}
                 if bool(data.get("contradicts")):
                     found += 1
@@ -461,7 +461,7 @@ class Ingestor:
         if not summary or len(summary.strip()) < 80:
             return 0.35, "summary too short to score"
         try:
-            raw = await self.c.qwen(CONFIDENCE_PROMPT + summary[:4000], temperature=0.1)
+            raw = await self.c.reason(CONFIDENCE_PROMPT + summary[:4000], temperature=0.1)
             data = _extract_json(raw) or {}
             conf = float(data.get("confidence", 0.5))
             reason = str(data.get("reason", ""))
@@ -503,7 +503,7 @@ class Ingestor:
                 continue
             try:
                 async with self._sem:
-                    caption = await self.c.llava(
+                    caption = await self.c.vision(
                         "Describe this image in one concise sentence. Mention any text, "
                         "diagrams, charts, or entities visible.",
                         img_path,
@@ -526,7 +526,7 @@ class Ingestor:
             return []
         try:
             async with self._sem:
-                raw = await self.c.gemma(DOC2QUERY_PROMPT + summary[:3000], temperature=0.4)
+                raw = await self.c.summarize(DOC2QUERY_PROMPT + summary[:3000], temperature=0.4)
             data = _extract_json(raw) or {}
             return [str(q).strip() for q in (data.get("questions") or []) if str(q).strip()][:6]
         except Exception as e:

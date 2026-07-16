@@ -104,7 +104,7 @@ async def plan_retrieval(
     )
 
     try:
-        raw = await client.qwen(prompt, system=PLANNER_SYSTEM, temperature=0.1)
+        raw = await client.reason(prompt, system=PLANNER_SYSTEM, temperature=0.1)
     except Exception as e:
         log.warning("planner LLM call failed; falling back to trivial plan",
                     extra={"metadata": {"error": str(e)[:160]}})

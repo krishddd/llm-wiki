@@ -88,7 +88,7 @@ async def verify_claims(client, *, answer: str, claims: list[Claim], citations) 
     prompt = "\n".join(lines)
 
     try:
-        raw = await client.gemma(prompt, system=_VERIFY_SYSTEM, temperature=0.1)
+        raw = await client.summarize(prompt, system=_VERIFY_SYSTEM, temperature=0.1)
     except Exception as e:
         log.debug("claim verify call failed", extra={"metadata": {"error": str(e)[:160]}})
         return verdicts

@@ -132,7 +132,7 @@ async def propose_edit(
         "Should the existing page be edited in light of the new source?"
     )
     try:
-        raw = await client.qwen(prompt, system=_RECONCILE_SYSTEM, temperature=0.2)
+        raw = await client.reason(prompt, system=_RECONCILE_SYSTEM, temperature=0.2)
         d = _extract_json(raw) or {}
     except Exception as e:
         log.debug("propose_edit failed", extra={"metadata": {"error": str(e)[:120]}})

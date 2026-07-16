@@ -88,7 +88,7 @@ async def rewrite_for_gaps(
     )
 
     try:
-        raw = await client.qwen(prompt, system=REWRITE_SYSTEM, temperature=0.2)
+        raw = await client.reason(prompt, system=REWRITE_SYSTEM, temperature=0.2)
         data = _extract_json(raw) or {}
         queries = data.get("queries") or []
         cleaned = [str(q).strip() for q in queries if str(q).strip()]

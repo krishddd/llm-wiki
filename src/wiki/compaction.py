@@ -100,7 +100,7 @@ async def compact_bloated_pages(
         )
 
         try:
-            compacted_body = await client.qwen(prompt, system=COMPACT_SYSTEM, temperature=0.1)
+            compacted_body = await client.reason(prompt, system=COMPACT_SYSTEM, temperature=0.1)
             compacted_body = compacted_body.strip() if compacted_body else core_body
         except Exception as e:
             log.warning("compaction LLM call failed", extra={"metadata": {"page": path.name, "error": str(e)[:160]}})

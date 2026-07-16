@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     ollama_host: str = "http://localhost:11434"
 
     # 4-model stack. model_fast == model_reason so the qwen-timeout fallback path
-    # is a no-op (we do NOT have llama3.2 installed; see llm.qwen()).
+    # is a no-op (we do NOT have llama3.2 installed; see llm.reason()).
     model_embed: str = "nomic-embed-text:latest"
     # Domain-specialized embedding — a stronger embedder for STEM / notation-heavy
     # content (maths, science, economics, engineering), where the small general model

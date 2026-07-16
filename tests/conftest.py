@@ -36,7 +36,7 @@ class FakeOllama:
             "llava:7b",
         ]
 
-    async def gemma(self, prompt: str, system: str | None = None, *, temperature: float = 0.4) -> str:
+    async def summarize(self, prompt: str, system: str | None = None, *, temperature: float = 0.4) -> str:
         await self._track()
         try:
             await asyncio.sleep(0.01)
@@ -61,7 +61,7 @@ class FakeOllama:
         finally:
             await self._release()
 
-    async def qwen(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
+    async def reason(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
         self.call_log.append({"model": "qwen", "len": len(prompt)})
         if "confidence" in (system or "") or "confidence" in prompt.lower()[:200]:
             return '{"confidence": 0.82, "reason": "faithful summary"}'
@@ -82,10 +82,10 @@ class FakeOllama:
             return '{"orphans":[],"stale":[],"missing_entity_pages":[],"contradictions":[],"suggested_sources":[]}'
         return "qwen default response"
 
-    async def llama(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
+    async def fast(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
         return "llama fallback"
 
-    async def llava(self, prompt: str, image_path) -> str:
+    async def vision(self, prompt: str, image_path) -> str:
         return "image described"
 
     async def embed(self, text: str) -> list[float]:

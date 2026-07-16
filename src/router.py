@@ -15,7 +15,7 @@ ROUTE_SYSTEM = (
 
 async def route(user_input: str, client: OllamaClient | None = None) -> dict:
     c = client or get_client()
-    raw = await c.qwen(user_input, system=ROUTE_SYSTEM, temperature=0.1)
+    raw = await c.reason(user_input, system=ROUTE_SYSTEM, temperature=0.1)
     m = re.search(r"\{.*\}", raw, re.DOTALL)
     if not m:
         return {"action": "QUERY", "args": {"question": user_input}}

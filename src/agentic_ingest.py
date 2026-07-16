@@ -133,7 +133,7 @@ async def plan_ingest_llm(client, elements, base_plan: IngestPlan) -> IngestPlan
         n_text = sum(1 for el in elements if getattr(el, "kind", "") == "text")
         stats = f"elements: text={n_text} table={n_table} code={n_code}; domain={base_plan.domain}"
         sample = _sample_text(elements, max_chars=1200)
-        raw = await client.gemma(f"{stats}\n\nSAMPLE:\n{sample}", system=_PLAN_SYSTEM, temperature=0.1)
+        raw = await client.summarize(f"{stats}\n\nSAMPLE:\n{sample}", system=_PLAN_SYSTEM, temperature=0.1)
         s = re.sub(r"^```(?:json)?\n?", "", (raw or "").strip())
         s = re.sub(r"\n?```$", "", s)
         m = re.search(r"\{.*\}", s, re.DOTALL)
