@@ -40,7 +40,7 @@ class FakeOllama:
         await self._track()
         try:
             await asyncio.sleep(0.01)
-            self.call_log.append({"model": "gemma", "len": len(prompt)})
+            self.call_log.append({"role": "summary", "len": len(prompt)})
             if "questions that this document" in prompt:
                 return (
                     '{"questions":["What is Docker used for?","How does FastAPI '
@@ -62,7 +62,7 @@ class FakeOllama:
             await self._release()
 
     async def reason(self, prompt: str, system: str | None = None, *, temperature: float = 0.3) -> str:
-        self.call_log.append({"model": "qwen", "len": len(prompt)})
+        self.call_log.append({"role": "reason", "len": len(prompt)})
         if "confidence" in (system or "") or "confidence" in prompt.lower()[:200]:
             return '{"confidence": 0.82, "reason": "faithful summary"}'
         if "merging partial" in prompt:

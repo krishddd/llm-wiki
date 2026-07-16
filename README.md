@@ -129,10 +129,10 @@ agentic ingest plan               ← adaptive chunk size/overlap by content den
 layout_aware_chunks               ← atomic tables / images, semantic blocks
    │
    ▼
-gemma summarise per chunk         ← fast LLM extracts entities + relations
+summarise per chunk (summary)     ← summary-role model extracts entities + relations
    │
    ▼
-qwen merge (3-tier fallback)      ← reasoning LLM consolidates + scores conf
+merge (reason role, 3-tier)       ← reasoning-role model consolidates + scores conf
    │
    ▼
 extraction-signal floor           ← rich text → confidence bump
@@ -153,7 +153,7 @@ confidence gate
 upsert entities + relations into graph.db
    │
    ▼
-extract S-P-O claims (qwen)  →  add_fact(valid_from=today)
+extract S-P-O claims (reason role)  →  add_fact(valid_from=today)
    │
    ▼
 contradiction detection vs related pages
@@ -214,7 +214,7 @@ mark_accessed() on every retrieved page → reinforces lifecycle counter
 CRAG relevance filter             ← drop off-topic candidates
    │
    ▼
-adaptive model routing            ← quantitative Q → VibeThinker reasons, qwen formats
+adaptive model routing            ← quantitative Q → solver reasons, reasoner formats
    │
    ▼
 multimodal expansion              ← surface tables/figures linked to retrieved entities
@@ -257,7 +257,7 @@ isn't installed.
 
 | Upgrade | What it does | Flag (default) |
 |---|---|---|
-| **Adaptive model routing** | Quantitative questions (maths, economics, science, engineering) are reasoned by [VibeThinker](https://github.com/WeiboAI/VibeThinker) — a maths/STEM specialist — then qwen formats + cites the result. Plain-English questions skip it. | `ROUTE_SOLVER_ENABLED` (on; self-disables if `MODEL_SOLVER` not served) |
+| **Adaptive model routing** | Quantitative questions (maths, economics, science, engineering) are reasoned by [VibeThinker](https://github.com/WeiboAI/VibeThinker) — a maths/STEM specialist — then the reasoning-role model formats + cites the result. Plain-English questions skip it. | `ROUTE_SOLVER_ENABLED` (on; self-disables if `MODEL_SOLVER` not served) |
 | **Domain detection + tagging** | Every page and query is classified general / math / science / economics / engineering, driving routing and retrieval. | always on |
 | **Agentic retrieval** | The `/query` front door auto-routes simple questions to a fast single pass and complex ones to an iterative plan → retrieve → sufficiency-check → gap-rewrite loop. | `AGENTIC_ENABLED` (on) |
 | **Agentic ingestion** | Per-document adaptive chunk sizing — dense technical content gets smaller chunks, narrative prose larger. | `INGEST_AGENTIC_PLANNING` (on) |

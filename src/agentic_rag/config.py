@@ -20,8 +20,8 @@ class AgenticSettings(BaseSettings):
     agentic_enabled: bool = True
     agentic_max_iterations: int = 3
     agentic_coverage_threshold: float = 0.85
-    agentic_quick_draft_model: str = "gemma"        # client method name
-    agentic_sca_model: str = "qwen"                 # client method name
+    agentic_quick_draft_model: str = "summarize"    # summary-role method (see OllamaClient.summarize)
+    agentic_sca_model: str = "reason"               # reasoning-role method (see OllamaClient.reason)
     agentic_complexity_threshold: str = "multi_hop" # min intent to trigger agentic path
     agentic_fanout_concurrency: int = 2
     agentic_per_iteration_top_k: int = 5

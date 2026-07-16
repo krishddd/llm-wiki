@@ -173,7 +173,7 @@ class OllamaClient:
         tasks here — VibeThinker is weak on broad-knowledge / recall.
 
         Raises OllamaError if `model_solver` is unset or the model isn't served;
-        callers should catch and fall back to qwen synthesis.
+        callers should catch and fall back to reason-role synthesis.
         """
         spec_provider = self.settings.provider_solver and self.settings.provider_solver.lower() != "ollama"
         if not self.settings.model_solver and not spec_provider:
