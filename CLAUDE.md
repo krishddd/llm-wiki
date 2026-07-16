@@ -26,13 +26,17 @@ All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`)
 Each role can be routed to a hosted, OpenAI-compatible provider instead of
 Ollama via `PROVIDER_<ROLE>` (`summary` / `reason` / `fast` / `solver` / `embed` /
 `vision`), default `ollama`. Vision routes the llava image-caption role to a
-multimodal provider via the OpenAI `image_url` content schema. Providers: `groq` (LPU-fast open weights), `github` (GitHub Models,
-gpt-4.1 family), `gemini` (Google AI Studio; the only provider wired for embeddings).
+multimodal provider via the OpenAI `image_url` content schema. Providers (v6 roster,
+`PROVIDER_DEFS` registry): `groq`, `github` (GitHub Models), `gemini`, `openai`,
+`anthropic` (Claude via api.anthropic.com/v1 OpenAI-compat; `force_max_tokens`),
+`xai` (Grok), `openrouter` (100+ OSS models, one key), and `custom` — any
+OpenAI-compatible gateway (vLLM / LM Studio / llama.cpp / Together / DeepSeek …)
+via `CUSTOM_BASE_URL`/`CUSTOM_MODEL` (key optional for local gateways).
+Embeddings: `ollama` | `gemini` | `openai` | `custom` only.
 `resolve_chat_provider()` returns `None` (→ Ollama) when the role is `ollama` or its
 key/model is unset, so routing is opt-in and self-healing. A provider HTTP error is
 re-raised as `OllamaError` so the existing role fallbacks (e.g. qwen→llama) still fire.
-Keys (`GROQ_API_KEY`, `GITHUB_MODELS_TOKEN`, `GOOGLE_GENAI_API_KEY`) are read from env
-ONLY — never committed.
+Keys are read from env ONLY — never committed. `.env.example` documents every knob.
 
 ### Adaptive model routing (VibeThinker)
 

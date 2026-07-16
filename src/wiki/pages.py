@@ -8,6 +8,7 @@ stamped centrally in `write_page` so every writer conforms without repeating its
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from dataclasses import dataclass
@@ -112,13 +113,33 @@ def write_page(page: Page) -> None:
 def stage_or_publish(
     title: str, body: str, frontmatter: dict, *, settings: Settings | None = None
 ) -> tuple[Path, bool]:
-    """Return (page_path, is_live). is_live=False means sent to wiki/review/."""
+    """Return (page_path, is_live). is_live=False means sent to wiki/review/.
+
+    Collision guard: two DIFFERENT documents with the same title slug must not
+    silently overwrite each other — if the slug is taken by a page from another
+    `source`, the new page gets a short hash suffix. Re-ingesting the same
+    source still overwrites its own page (intended).
+    """
     s = settings or get_settings()
     conf = float(frontmatter.get("confidence", 0.0))
     is_live = conf >= s.confidence_threshold
     sub = s.wiki_dir / ("sources" if is_live else "review")
     sub.mkdir(parents=True, exist_ok=True)
     path = sub / f"{_slug(title)}.md"
+    new_source = str(frontmatter.get("source") or "")
+    if path.exists() and new_source:
+        try:
+            existing_source = str(read_page(path).frontmatter.get("source") or "")
+        except Exception:
+            existing_source = ""
+        if existing_source and existing_source != new_source:
+            suffix = hashlib.sha1(new_source.encode("utf-8")).hexdigest()[:8]
+            path = sub / f"{_slug(title)}-{suffix}.md"
+            log.warning(
+                "title slug collision — disambiguating",
+                extra={"metadata": {"title": title, "existing": existing_source,
+                                    "new": new_source, "path": str(path)}},
+            )
     write_page(Page(path=path, frontmatter=frontmatter, body=body))
     event = "WIKI_WRITE" if is_live else "WIKI_WRITE_STAGED"
     audit(log, event, str(path), confidence=conf, title=title)

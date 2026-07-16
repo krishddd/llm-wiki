@@ -113,6 +113,14 @@ def _extract_json(s: str) -> dict | None:
         return None
 
 
+def _truncate_words(s: str, max_chars: int) -> str:
+    """Cap `s` at max_chars without cutting mid-word."""
+    s = (s or "").strip()
+    if len(s) <= max_chars:
+        return s
+    return s[:max_chars].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+
+
 class Ingestor:
     def __init__(
         self,
@@ -827,7 +835,16 @@ class Ingestor:
         if self.s.ingest_doc2query:
             hyp_questions = await self._doc2query(summary)
 
-        entity_refs = [e.name for e in entities][:50]
+        # Dedupe refs by name (entities are unique per (name, type), so the same
+        # name can appear under two types — e.g. "Claude" as PERSON and CONCEPT).
+        seen_names: set[str] = set()
+        entity_refs: list[str] = []
+        for e in entities:
+            low = e.name.lower()
+            if low not in seen_names:
+                seen_names.add(low)
+                entity_refs.append(e.name)
+        entity_refs = entity_refs[:50]
         has_tables = any(el.kind == "table" for el in elements)
         has_images = any(el.kind == "image" for el in elements)
         # Domain tag — stamp the page's subject (general / math / science / economics /
@@ -846,7 +863,7 @@ class Ingestor:
             "ingested": date.today().isoformat(),
             "source_count": 1,
             "confidence": round(confidence, 2),
-            "confidence_reason": reason[:300],
+            "confidence_reason": _truncate_words(reason, 300),
             "domain": domain,
             "chunk_strategy": ingest_plan.strategy if ingest_plan else "fixed",
             "tags": sorted({e.type.lower() for e in entities}),

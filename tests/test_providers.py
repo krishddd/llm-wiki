@@ -171,3 +171,86 @@ async def test_embed_one_offline() -> None:
         spec = ProviderSpec("gemini", "https://x/openai", "AIz", "text-embedding-004")
         vec = await embed_one(http, spec, "text")
     assert vec == [0.1, 0.2, 0.3]
+
+
+# ───── v6 open roster: openai / anthropic / xai / openrouter / custom ─────
+
+
+def _settings6(**kw):
+    base = dict(
+        openai_base_url="https://api.openai.com/v1", openai_api_key="",
+        openai_model="gpt-4.1-mini", openai_vision_model="gpt-4.1-mini",
+        openai_embed_model="text-embedding-3-small",
+        anthropic_base_url="https://api.anthropic.com/v1", anthropic_api_key="",
+        anthropic_model="claude-sonnet-5", anthropic_vision_model="claude-sonnet-5",
+        xai_base_url="https://api.x.ai/v1", xai_api_key="", xai_model="grok-4",
+        xai_vision_model="",
+        openrouter_base_url="https://openrouter.ai/api/v1", openrouter_api_key="",
+        openrouter_model="meta-llama/llama-3.3-70b-instruct", openrouter_vision_model="",
+        custom_base_url="", custom_api_key="", custom_model="",
+        custom_vision_model="", custom_embed_model="",
+    )
+    base.update(kw)
+    return _settings(**base)
+
+
+def test_openai_and_anthropic_routes() -> None:
+    s = _settings6(provider_reason="anthropic", anthropic_api_key="sk-ant-x",
+                   provider_summary="openai", openai_api_key="sk-x")
+    reason = resolve_chat_provider(s, "reason")
+    assert reason is not None and reason.name == "anthropic"
+    assert reason.model == "claude-sonnet-5"
+    assert reason.force_max_tokens is True   # Anthropic compat needs max_tokens
+    summary = resolve_chat_provider(s, "summary")
+    assert summary is not None and summary.name == "openai"
+    assert summary.force_max_tokens is False
+
+
+def test_xai_and_openrouter_routes() -> None:
+    s = _settings6(provider_fast="xai", xai_api_key="xai-x",
+                   provider_solver="openrouter", openrouter_api_key="sk-or-x")
+    assert resolve_chat_provider(s, "fast").model == "grok-4"
+    assert resolve_chat_provider(s, "solver").name == "openrouter"
+
+
+def test_custom_gateway_without_key() -> None:
+    # Local vLLM / LM Studio gateways need no API key — base_url + model suffice.
+    s = _settings6(provider_reason="custom",
+                   custom_base_url="http://localhost:8001/v1", custom_model="qwen2.5-32b")
+    spec = resolve_chat_provider(s, "reason")
+    assert spec is not None and spec.name == "custom" and spec.api_key == ""
+    # But a missing base_url still falls back to Ollama.
+    assert resolve_chat_provider(_settings6(provider_reason="custom"), "reason") is None
+
+
+def test_embeddings_openai_and_custom() -> None:
+    s = _settings6(provider_embed="openai", openai_api_key="sk-x")
+    assert resolve_embed_provider(s).model == "text-embedding-3-small"
+    s2 = _settings6(provider_embed="custom", custom_base_url="http://localhost:8001/v1",
+                    custom_embed_model="bge-m3")
+    assert resolve_embed_provider(s2).model == "bge-m3"
+    # Anthropic / xAI / OpenRouter have no embeddings endpoint.
+    assert resolve_embed_provider(_settings6(provider_embed="anthropic", anthropic_api_key="k")) is None
+    assert resolve_embed_provider(_settings6(provider_embed="xai", xai_api_key="k")) is None
+
+
+def test_anthropic_payload_includes_max_tokens() -> None:
+    p = build_chat_payload("claude-sonnet-5", "hi", "sys", 0.3, force_max_tokens=True)
+    assert p["max_tokens"] == 4096
+    p2 = build_chat_payload("gpt-4.1-mini", "hi", None, 0.3)
+    assert "max_tokens" not in p2
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_no_auth_header_when_keyless() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["auth"] = request.headers.get("authorization")
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        spec = ProviderSpec("custom", "http://localhost:8001/v1", "", "local-model")
+        out = await chat_completion(http, spec, "hi", None)
+    assert out == "ok"
+    assert captured["auth"] is None
