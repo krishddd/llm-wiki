@@ -21,6 +21,7 @@ from .loaders import elements_to_markdown, layout_aware_chunks, load_elements, l
 from .loaders.elements import DocElement
 from .logging_config import audit
 from .search.bm25_index import BM25Index
+from .search.chunks import SUB_CHUNK_OVERLAP, SUB_CHUNK_TARGET, chunk_text
 from .search.dense_index import DenseIndex
 from .wiki.entity_pages import rebuild_entity_pages
 from .wiki.episodic import append_episode
@@ -99,7 +100,7 @@ class IngestResult:
 
 # Canonical chunker lives in search.chunks so retrieval can re-derive the exact
 # sub-chunks at query time (small-to-big). Keep the old local name as an alias.
-from .search.chunks import SUB_CHUNK_OVERLAP, SUB_CHUNK_TARGET, chunk_text as _chunk_text  # noqa: E402
+_chunk_text = chunk_text
 
 
 def _extract_json(s: str) -> dict | None:

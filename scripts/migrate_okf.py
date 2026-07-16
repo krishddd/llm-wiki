@@ -25,8 +25,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.wiki.index_md import rebuild_index                      # noqa: E402
-from src.wiki.pages import (                                     # noqa: E402
+from src.wiki.index_md import rebuild_index  # noqa: E402
+from src.wiki.pages import (  # noqa: E402
     RESERVED_FILENAMES,
     derive_description,
     okf_type_for,

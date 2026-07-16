@@ -21,6 +21,7 @@ Scheduled weekly (`build_topics` job) and runnable via POST /admin/run/build_top
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import math
@@ -106,10 +107,8 @@ async def _remove_existing_topics(wiki_dir: Path, bm25, dense) -> int:
         for index in (bm25, dense):
             if index is None:
                 continue
-            try:
+            with contextlib.suppress(Exception):
                 await index.delete(pid)
-            except Exception:
-                pass
     return removed
 
 
