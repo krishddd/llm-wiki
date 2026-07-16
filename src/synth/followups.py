@@ -1,5 +1,5 @@
 """Generate 2-3 short follow-up questions a user could ask next, given the
-current question + answer + retrieved page titles. Cheap qwen call."""
+current question + answer + retrieved page titles. Cheap reason-role call."""
 from __future__ import annotations
 
 import logging

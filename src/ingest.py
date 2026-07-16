@@ -1,4 +1,4 @@
-"""Document ingest pipeline: load → chunk → Gemma summarise+extract (throttled) → Qwen merge + confidence → write.
+"""Document ingest pipeline: load → chunk → summary-role summarise+extract (throttled) → reason-role merge + confidence → write.
 
 Concurrency note: Ollama queues concurrent requests to the same model. We use a module-level asyncio.Semaphore
 sized by `max_concurrent_llm_req` (env-configurable) to cap in-flight per-model requests and avoid timeout cascades

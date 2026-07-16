@@ -1,4 +1,4 @@
-"""Lightweight Qwen-backed intent router. Not used for the primary REST endpoints
+"""Lightweight reason-role intent router. Not used for the primary REST endpoints
 (which are explicit), but exposed as /route for free-form CLI agents."""
 from __future__ import annotations
 

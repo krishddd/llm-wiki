@@ -214,7 +214,7 @@ class QueryResponse(BaseModel):
     saved_page: str | None = None
     retrieval_quality: str = "correct"   # CRAG verdict: correct | ambiguous | incorrect
     intent: str = "synthesis"            # factual | multi_hop | synthesis | exhaustive
-    reasoner: str = "qwen"               # qwen (default synth) | solver (VibeThinker routed)
+    reasoner: str = "reason"             # reason (default synth role) | solver (VibeThinker routed)
     quality_score: float = 1.0           # reflection critique 0-1
     quality_issues: list[str] = []
     per_claim_confidences: list[dict] = []   # [{"citation": "...", "confidence": 0.92}, ...]
@@ -352,7 +352,7 @@ async def query(body: QueryBody) -> QueryResponse:
         grounded=getattr(result, "grounded", True),
         retrieval_quality=getattr(result, "retrieval_quality", "correct"),
         intent=getattr(result, "intent", "synthesis"),
-        reasoner=getattr(result, "reasoner", "qwen"),
+        reasoner=getattr(result, "reasoner", "reason"),
         quality_score=getattr(result, "quality_score", 1.0),
         quality_issues=getattr(result, "quality_issues", []) or [],
         per_claim_confidences=getattr(result, "per_claim_confidences", []) or [],
