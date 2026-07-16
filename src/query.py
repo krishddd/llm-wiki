@@ -139,7 +139,7 @@ class QueryResult:
     saved_page: str | None = None
     retrieval_quality: str = "correct"
     intent: str = "synthesis"
-    reasoner: str = "qwen"   # "qwen" (default synth) or "solver" (VibeThinker routed)
+    reasoner: str = "reason"   # "reason" (default synth role) or "solver" (VibeThinker routed)
     quality_score: float = 1.0
     quality_issues: list[str] = field(default_factory=list)
     per_claim_confidences: list[dict] = field(default_factory=list)
@@ -612,7 +612,7 @@ class QueryEngine:
         # questions skip the solver and go straight to qwen synthesis. Any solver
         # failure (model not installed, timeout) silently falls back to qwen-only.
         prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}{media_context}"
-        reasoner_used = "qwen"
+        reasoner_used = "reason"
         if (
             self.s.route_solver_enabled
             and self.s.model_solver

@@ -35,7 +35,7 @@ via `CUSTOM_BASE_URL`/`CUSTOM_MODEL` (key optional for local gateways).
 Embeddings: `ollama` | `gemini` | `openai` | `custom` only.
 `resolve_chat_provider()` returns `None` (→ Ollama) when the role is `ollama` or its
 key/model is unset, so routing is opt-in and self-healing. A provider HTTP error is
-re-raised as `OllamaError` so the existing role fallbacks (e.g. qwen→llama) still fire.
+re-raised as `OllamaError` so the existing role fallbacks (e.g. reason→fast) still fire.
 Keys are read from env ONLY — never committed. `.env.example` documents every knob.
 
 ### Adaptive model routing (VibeThinker)
@@ -54,8 +54,8 @@ two-stage:
 3. `qwen3:14b` then formats + cites that verified reasoning into the standard
    JSON/citation schema — so grounding, per-claim confidence and save-back are unchanged.
 
-Any solver failure (model not installed, timeout) silently falls back to qwen-only
-synthesis. `QueryResult.reasoner` records `"qwen"` or `"solver"`.
+Any solver failure (model not installed, timeout) silently falls back to reason-only
+synthesis. `QueryResult.reasoner` records `"reason"` or `"solver"`.
 
 **Serving:** VibeThinker ships for vLLM / SGLang / transformers. To use it in this
 Ollama stack, either pull a GGUF quant (`ollama create vibethinker:3b -f Modelfile`
@@ -85,7 +85,7 @@ Five techniques layered onto the existing pipeline (each flag-gated, on by defau
 | **Small-to-big retrieval** — rerank/synthesise the matched 1500-char sub-chunks (±neighbours) instead of `page[:4000]`; `src/search/chunks.py` re-derives the exact index-time chunks | `hybrid.py` | `QUERY_CHUNK_CONTEXT` |
 | **Doc2Query** (Nogueira & Lin) — index the questions each doc answers as `<pid>#hq` so question-phrased queries match declarative text | `ingest.py` | `INGEST_DOC2QUERY` |
 | **Lost-in-the-middle reorder** (Liu et al. 2023) — ends-load synthesis context: best page first, runner-up last | `query.py` | `QUERY_LITM_REORDER` |
-| **NLI-lite claim verification** — one batched gemma call judges each cited claim against its cited snippet; unsupported ×0.35 confidence | `synth/verify.py` | `QUERY_CLAIM_VERIFY` |
+| **NLI-lite claim verification** — one batched summary-role call judges each cited claim against its cited snippet; unsupported ×0.35 confidence | `synth/verify.py` | `QUERY_CLAIM_VERIFY` |
 | **Machine-page down-weight** — synthesis/promoted/crystallized pages score ×0.85 at rerank so save-backs never outrank primary sources (anti-feedback-loop) | `hybrid.py` | `RETRIEVAL_SYNTH_DOWNWEIGHT` |
 | **RAPTOR-lite topics** (Sarthi et al. 2024 / GraphRAG communities) — weekly greedy-cosine clustering of live pages → `topic-*.md` overview pages (kind `topic`) answering corpus-level questions | `wiki/topics.py` | `JOB_BUILD_TOPICS_ENABLED`, `TOPICS_MIN_CLUSTER`, `TOPICS_MAX`, `TOPICS_SIM_THRESHOLD` |
 
@@ -244,14 +244,14 @@ load_elements (multi-format)
   → privacy redaction (strip API keys / JWTs / private keys / passwords)  [PRIVACY_REDACT]
   → agentic plan: adaptive chunk size/overlap from structure + density   [agentic ingestion]
   → layout_aware_chunks (atomic tables/images, plan-driven target/overlap)
-  → gemma summarise per chunk + extract entities/relations
-  → qwen merge (3-tier fallback) + score confidence
+  → summary-role summarise per chunk + extract entities/relations
+  → reason-role merge (3-tier fallback) + score confidence
   → extraction-signal floor (rich → bumps confidence)
   → contextual preamble (Anthropic) for embedding text
-  → Doc2Query: gemma generates the questions the doc answers → indexed as <pid>#hq   [v5]
+  → Doc2Query: summary-role generates the questions the doc answers → indexed as <pid>#hq   [v5]
   → write to sources/ or review/
   → upsert entities + relations
-  → extract S-P-O claims (qwen) → add_fact()         [v2]
+  → extract S-P-O claims (reason role) → add_fact()         [v2]
   → contradiction detection vs. related pages
        → on flag: supersede_fact() on older page    [v2]
        → on flag: composite-score auto-resolver     [v2 — Phase E2]
@@ -282,13 +282,13 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
   → mark_accessed() on retrieved pages              [v2 — Phase B3]
   → CRAG relevance filter (drop off-topic)
   → adaptive model routing: if quantitative (maths/econ/science/eng),     [VibeThinker]
-       VibeThinker reasons step-by-step → qwen formats + cites the result
+       VibeThinker reasons step-by-step → reason-role formats + cites the result
   → multimodal expansion: surface media nodes linked to retrieved        [GRAPH_MULTIMODAL_NODES]
        entities (tables/figures/code) into context + related_media
   → lost-in-the-middle reorder: ends-load context (best first, runner-up last)  [v5]
   → synthesis (numbered citations, [Page]^conf markers, blocks)
   → grounding check + CRAG ceiling
-  → NLI-lite claim verification: ONE batched gemma call judges each cited claim  [v5]
+  → NLI-lite claim verification: ONE batched summary-role call judges each cited claim  [v5]
        against its cited snippet (supported/partial/unsupported) → recalibrates
        per-claim + overall confidence (catches "right page, wrong claim")
   → reflection critique → optional refinement
@@ -300,7 +300,7 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
 ### Lint
 
 ```
-qwen scans first 30 pages
+reason-role scans first 30 pages
   → JSON report (orphans, stale, missing_entity_pages, contradictions)
   → if auto_fix=True (Phase E1):
        backlink orphans from index.md
@@ -351,7 +351,7 @@ of the fixed 6000-char target:
 - **narrative** (long prose, low density) → ~7500 chars + ~2% overlap.
 - **balanced** → existing defaults.
 
-Heuristic-first (on by default, zero LLM cost). Optional gemma refinement via
+Heuristic-first (on by default, zero LLM cost). Optional summary-role refinement via
 `INGEST_PLANNING_LLM` (one extra call per doc). All sizes clamped to [1500, 9000] /
 [80, 600]. The chosen strategy is recorded in frontmatter as `chunk_strategy`.
 

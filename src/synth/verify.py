@@ -71,7 +71,7 @@ def _snippet_for(token: str, citations) -> str:
 
 
 async def verify_claims(client, *, answer: str, claims: list[Claim], citations) -> list[str]:
-    """Return one verdict per claim (aligned with `claims`). One gemma call total."""
+    """Return one verdict per claim (aligned with `claims`). One summary-role call total."""
     verdicts = ["unknown"] * len(claims)
     items: list[tuple[int, str, str]] = []  # (claim_idx, sentence, snippet)
     for i, cl in enumerate(claims[:_MAX_CLAIMS]):

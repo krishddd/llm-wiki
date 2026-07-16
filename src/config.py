@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     # silently falls back to Ollama if its provider's API key or model is unset.
     # Providers: "ollama" | "groq" | "github" | "gemini" | "openai" | "anthropic"
     #            | "xai" | "openrouter" | "custom" (any OpenAI-compatible gateway).
-    provider_summary: str = "ollama"   # gemma role
-    provider_reason: str = "ollama"    # qwen role (synthesis / deep reasoning)
+    provider_summary: str = "ollama"   # summary role (summarise / extract)
+    provider_reason: str = "ollama"    # reason role (synthesis / deep reasoning)
     provider_fast: str = "ollama"      # fast-agent role
     provider_solver: str = "ollama"    # VibeThinker reasoning role
     provider_embed: str = "ollama"     # embeddings ("ollama" | "gemini" | "openai" | "custom")

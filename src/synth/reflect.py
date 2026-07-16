@@ -5,7 +5,7 @@ answer complete, well-cited, and free of hallucinations relative to the source
 context?' If gaps are found, we surface them in `quality_issues` and optionally
 trigger one re-synthesis with the gaps as guidance.
 
-Cheap (one gemma call) and catches a class of failures that grounding alone
+Cheap (one summary-role call) and catches a class of failures that grounding alone
 misses — e.g. answers that cite real pages but miss the question's actual
 sub-parts, or under-detailed answers to multi-part questions.
 """

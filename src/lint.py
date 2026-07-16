@@ -1,4 +1,4 @@
-"""Wiki health-check (Qwen) → optional auto-repair.
+"""Wiki health-check (reason role) → optional auto-repair.
 
 Read-only mode: returns a JSON report.
 Auto-fix mode (Phase E1):
