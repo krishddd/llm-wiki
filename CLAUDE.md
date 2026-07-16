@@ -85,6 +85,19 @@ Five techniques layered onto the existing pipeline (each flag-gated, on by defau
 | **Machine-page down-weight** — synthesis/promoted/crystallized pages score ×0.85 at rerank so save-backs never outrank primary sources (anti-feedback-loop) | `hybrid.py` | `RETRIEVAL_SYNTH_DOWNWEIGHT` |
 | **RAPTOR-lite topics** (Sarthi et al. 2024 / GraphRAG communities) — weekly greedy-cosine clustering of live pages → `topic-*.md` overview pages (kind `topic`) answering corpus-level questions | `wiki/topics.py` | `JOB_BUILD_TOPICS_ENABLED`, `TOPICS_MIN_CLUSTER`, `TOPICS_MAX`, `TOPICS_SIM_THRESHOLD` |
 
+Supporting tooling:
+- `scripts/backfill_v5.py` — one-off `#hq` + topic backfill for pre-v5 pages
+  (`--summary-model`/`--reason-model` override when gemma4/qwen3 aren't pulled).
+- **Eval harness** (`src/eval_harness.py`): `scripts/gen_golden.py` builds
+  `eval/golden.jsonl` from the live wiki; `scripts/run_eval.py [--ablate] [--answers]`
+  measures recall@k / MRR / latency per one-flag-off variant and answer quality.
+  Run it before adding or removing retrieval techniques.
+- **OKF bundles**: `scripts/export_okf.py <out>` ships sources/entities/procedures as
+  a validated standalone bundle; `scripts/import_okf.py <bundle>` imports external
+  bundles as curated pages (no LLM pass; links → RELATES_TO edges);
+  `src/loaders/okf_loader.py::validate_bundle` checks conformance.
+- `rerank()` degrades to RRF-order passthrough when flashrank isn't installed.
+
 ---
 
 ## Three-layer architecture

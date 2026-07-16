@@ -25,10 +25,19 @@ class RerankCandidate:
 
 
 def rerank(query: str, candidates: list[RerankCandidate], k: int = 5) -> list[tuple[RerankCandidate, float]]:
-    """Return top-k (candidate, score) sorted by relevance to query. No-op if candidates empty."""
+    """Return top-k (candidate, score) sorted by relevance to query. No-op if candidates empty.
+
+    Degrades gracefully when flashrank isn't installed: candidates keep their
+    incoming (RRF) order with descending pseudo-scores, so the pipeline still works
+    (just without cross-encoder precision).
+    """
     if not candidates:
         return []
-    from flashrank import RerankRequest
+    try:
+        from flashrank import RerankRequest
+    except ImportError:
+        log.warning("flashrank not installed — passthrough rerank (RRF order preserved)")
+        return [(c, 1.0 - i * (1.0 / max(len(candidates), 1))) for i, c in enumerate(candidates[:k])]
     passages = [{"id": c.page_id, "text": c.text, "meta": c.meta or {}} for c in candidates]
     ranked = _get_ranker().rerank(RerankRequest(query=query, passages=passages))
     by_id = {c.page_id: c for c in candidates}
