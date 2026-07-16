@@ -468,10 +468,10 @@ uvicorn src.api:app --reload --port 8000
 Ingest a doc, then ask a question:
 
 ```bash
-curl -F file=@paper.pdf http://localhost:8000/ingest
+curl -F files=@paper.pdf http://localhost:8000/ingest
 curl -X POST http://localhost:8000/query \
      -H 'Content-Type: application/json' \
-     -d '{"q": "What did the paper conclude about transformer scaling?"}'
+     -d '{"question": "What did the paper conclude about transformer scaling?"}'
 ```
 
 Run the agent over MCP:
