@@ -141,6 +141,30 @@ class Settings(BaseSettings):
     query_reflect: bool = True
     query_reflect_refine: bool = True   # actually re-synthesize on weak drafts
 
+    # ── Best-of-best RAG package ─────────────────────────────────────────────
+    # Small-to-big retrieval — rerank/synthesise on the sub-chunks that actually
+    # matched (plus neighbours) instead of the first 4000 chars of the parent page.
+    query_chunk_context: bool = True
+    # Anti-feedback-loop — score multiplier (<1) for machine-written pages
+    # (synthesis/promoted/crystallized) so save-backs never outrank primary sources.
+    # Set 1.0 to disable.
+    retrieval_synth_downweight: float = 0.85
+    # Lost-in-the-middle mitigation — ends-load the synthesis context (best page
+    # first, runner-up last) to counter positional attention decay.
+    query_litm_reorder: bool = True
+    # NLI-lite claim verification — ONE batched gemma call checks each cited claim
+    # sentence against its cited snippet; unsupported claims drag confidence down.
+    query_claim_verify: bool = True
+    # Doc2Query — at ingest, generate the questions each document answers and index
+    # them as their own retrieval unit (`<pid>#hq`). One gemma call per document.
+    ingest_doc2query: bool = True
+    # RAPTOR-lite topic pages — weekly clustering of live pages into topic overviews
+    # so corpus-level ("what are the main themes…") questions have a retrievable page.
+    job_build_topics_enabled: bool = True
+    topics_min_cluster: int = 3
+    topics_max: int = 12
+    topics_sim_threshold: float = 0.62
+
     # 2026 features:
     # Memory evolution — A-Mem reconciler. After a new source is ingested, edit
     # affected pre-existing pages instead of leaving them frozen.
@@ -168,7 +192,6 @@ class Settings(BaseSettings):
     job_lint_autofix_enabled: bool = True
     job_detect_procedures_enabled: bool = True
     job_page_compaction_enabled: bool = True
-    episodic_retention_days: int = 14
 
     wiki_dir: Path = Path("wiki")
     raw_dir: Path = Path("wiki/raw")

@@ -1,487 +1,490 @@
+---
+okf_version: "0.1"
+---
+
 # Wiki Index
 
 _Auto-generated — do not edit by hand._
 
-
 ## Sources
 
-- [Active Inference For Ai Safety](sources/active-inference-for-ai-safety.md) — conf 0.95
-- [Agent Reliability Simulation Framework](sources/agent-reliability-simulation-framework.md) — conf 0.75
+- [Active Inference For Ai Safety](sources/active-inference-for-ai-safety.md) - Large Language Models (LLMs) and Large Reasoning Models (LRMs) face a critical paradox: their near-human fluency masks systemic overconfidence and susceptibility to hallucinations—generating fluent… (conf 0.95)
+- [Agent Reliability Simulation Framework](sources/agent-reliability-simulation-framework.md) - The deployment of Large Language Model (LLM)-based agents has introduced a fundamental crisis in software reliability engineering, shifting from deterministic code to probabilistic, goal-oriented… (conf 0.75)
 
 ## Entities
 
-- [60% Performance Wall](entities/concept-60-performance-wall.md)
-- [60% Wall](entities/concept-60-wall.md)
-- [Absence Detection](entities/concept-absence-detection.md)
-- [AbsenceBench](entities/concept-absencebench.md)
-- [Act Mode](entities/concept-act-mode.md)
-- [Active Inference](entities/concept-active-inference.md)
-- [activeContext.md](entities/concept-activecontext-md.md)
-- [Adaptive Observability (Live Evaluation)](entities/concept-adaptive-observability-live-evaluation.md)
-- [Agent-based models (ABMs)](entities/concept-agent-based-models-abms.md)
-- [Agentic Systems](entities/concept-agentic-systems.md)
-- [agentic workflows](entities/concept-agentic-workflows.md)
-- [AgentOps](entities/concept-agentops.md)
-- [AGI Safety](entities/concept-agi-safety.md)
-- [AI Agent Drift](entities/concept-ai-agent-drift.md)
-- [AI Agents](entities/concept-ai-agents.md)
-- [AI Search](entities/concept-ai-search.md)
-- [AI Security](entities/concept-ai-security.md)
-- [AI](entities/concept-ai.md)
-- [Annotators' Instruction Assisted Prompt (AIAP)](entities/concept-annotators-instruction-assisted-prompt-aiap.md)
-- [Answer Relevancy](entities/concept-answer-relevancy.md)
-- [API](entities/concept-api.md)
-- [Architect](entities/concept-architect.md)
-- [Arize AX](entities/concept-arize-ax.md)
-- [ATLAS](entities/concept-atlas.md)
-- [Attention Dilution](entities/concept-attention-dilution.md)
-- [Autoformalization](entities/concept-autoformalization.md)
-- [AutoGen](entities/concept-autogen.md)
-- [AutoMalTool](entities/concept-automaltool.md)
-- [Automated Red Teaming](entities/concept-automated-red-teaming.md)
-- [autonomous agent](entities/concept-autonomous-agent.md)
-- [Autonomous Decision-Making](entities/concept-autonomous-decision-making.md)
-- [bad bootstrap](entities/concept-bad-bootstrap.md)
-- [Base64 encoding](entities/concept-base64-encoding.md)
-- [Behavioral Goal-Independence](entities/concept-behavioral-goal-independence.md)
-- [BLEU](entities/concept-bleu.md)
-- [BPMN](entities/concept-bpmn.md)
-- [Branch](entities/concept-branch.md)
-- [Business Invariants](entities/concept-business-invariants.md)
-- [Business Process Management (BPM)](entities/concept-business-process-management-bpm.md)
-- [Canary Analysis](entities/concept-canary-analysis.md)
-- [Causal Classification](entities/concept-causal-classification.md)
-- [Causal Graph](entities/concept-causal-graph.md)
-- [Chaos Monkey](entities/concept-chaos-monkey.md)
-- [Chaos Proxy](entities/concept-chaos-proxy.md)
-- [Chinese](entities/concept-chinese.md)
-- [CI/CD pipeline](entities/concept-ci-cd-pipeline.md)
-- [Claude 3](entities/concept-claude-3.md)
-- [Claude Dev](entities/concept-claude-dev.md)
-- [Claude](entities/concept-claude.md)
-- [Cline](entities/concept-cline.md)
-- [Clustering Number](entities/concept-clustering-number.md)
-- [Code](entities/concept-code.md)
-- [CoinRun](entities/concept-coinrun.md)
-- [Commit](entities/concept-commit.md)
-- [Community-Based Semantic Overlap](entities/concept-community-based-semantic-overlap.md)
-- [Computational Autopoiesis](entities/concept-computational-autopoiesis.md)
-- [Concept Drift](entities/concept-concept-drift.md)
-- [conceptual space](entities/concept-conceptual-space.md)
-- [Confidence Score](entities/concept-confidence-score.md)
-- [ConsistencyAI benchmark](entities/concept-consistencyai-benchmark.md)
-- [Context API](entities/concept-context-api.md)
-- [Context Engineering](entities/concept-context-engineering.md)
-- [Context-Parametric Conflict](entities/concept-context-parametric-conflict.md)
-- [Context Precision](entities/concept-context-precision.md)
-- [Context Recall](entities/concept-context-recall.md)
-- [Context Rot](entities/concept-context-rot.md)
-- [Context Saturation](entities/concept-context-saturation.md)
-- [Convergence Speed](entities/concept-convergence-speed.md)
-- [Cosine Similarity](entities/concept-cosine-similarity.md)
-- [Counterfactual Challenge Levels](entities/concept-counterfactual-challenge-levels.md)
-- [counterfactual testing strategies](entities/concept-counterfactual-testing-strategies.md)
-- [Counterfactual Testing](entities/concept-counterfactual-testing.md)
-- [CrewAI](entities/concept-crewai.md)
-- [Critique Shadowing](entities/concept-critique-shadowing.md)
-- [Cross-Encoder](entities/concept-cross-encoder.md)
-- [curiosity](entities/concept-curiosity.md)
-- [DAN](entities/concept-dan.md)
-- [Data Drift](entities/concept-data-drift.md)
-- [decision theory](entities/concept-decision-theory.md)
-- [Deep Memory Retrieval (DMR)](entities/concept-deep-memory-retrieval-dmr.md)
-- [Descriptive Evaluation](entities/concept-descriptive-evaluation.md)
-- [Diffusion Models](entities/concept-diffusion-models.md)
-- [Digital Twin framework](entities/concept-digital-twin-framework.md)
-- [Digital Twin of an Organization (DTO)](entities/concept-digital-twin-of-an-organization-dto.md)
-- [Digital Twin Simulation Framework](entities/concept-digital-twin-simulation-framework.md)
-- [Digital Twin](entities/concept-digital-twin.md)
-- [distributed architectures](entities/concept-distributed-architectures.md)
-- [Docker](entities/concept-docker.md)
-- [Document Corpora](entities/concept-document-corpora.md)
-- [DSPy](entities/concept-dspy.md)
-- [Dual-Mode Operation Protocol](entities/concept-dual-mode-operation-protocol.md)
-- [Emergent Systemic Risk](entities/concept-emergent-systemic-risk.md)
-- [entropy problem](entities/concept-entropy-problem.md)
-- [Entropy](entities/concept-entropy.md)
-- [Environment Layer](entities/concept-environment-layer.md)
-- [Environment Simulator](entities/concept-environment-simulator.md)
-- [Episodic Memory Graph](entities/concept-episodic-memory-graph.md)
-- [Epistemic Agent](entities/concept-epistemic-agent.md)
-- [Epistemic Value](entities/concept-epistemic-value.md)
-- [Evaluator Agent](entities/concept-evaluator-agent.md)
-- [Expected Free Energy](entities/concept-expected-free-energy.md)
-- [Expected Value of Perfect Information](entities/concept-expected-value-of-perfect-information.md)
-- [External Hippocampus](entities/concept-external-hippocampus.md)
-- [Extreme Values](entities/concept-extreme-values.md)
-- [Extrinsic Value](entities/concept-extrinsic-value.md)
-- [F1 Scores](entities/concept-f1-scores.md)
-- [Faithfulness (Groundedness)](entities/concept-faithfulness-groundedness.md)
-- [Faithfulness](entities/concept-faithfulness.md)
-- [Finance, law, and healthcare](entities/concept-finance-law-and-healthcare.md)
-- [Financial contagion](entities/concept-financial-contagion.md)
-- [Financial Forecasting Models](entities/concept-financial-forecasting-models.md)
-- [Financial Phrasebank](entities/concept-financial-phrasebank.md)
-- [Financial Sentiment Analysis (FSA)](entities/concept-financial-sentiment-analysis-fsa.md)
-- [FinTech](entities/concept-fintech.md)
-- [Five 9s](entities/concept-five-9s.md)
-- [Formal Methods](entities/concept-formal-methods.md)
-- [Formal Verification](entities/concept-formal-verification.md)
-- [Free Energy Principle](entities/concept-free-energy-principle.md)
-- [Fuzzing](entities/concept-fuzzing.md)
-- [G-Retriever](entities/concept-g-retriever.md)
-- [G7 world leaders](entities/concept-g7-world-leaders.md)
-- [Garbage Data](entities/concept-garbage-data.md)
-- [Gemini 1.5](entities/concept-gemini-1-5.md)
-- [Generative Adversarial Networks (GANs)](entities/concept-generative-adversarial-networks-gans.md)
-- [Generative AI systems](entities/concept-generative-ai-systems.md)
-- [generative model](entities/concept-generative-model.md)
-- [governance graph](entities/concept-governance-graph.md)
-- [GPT-4](entities/concept-gpt-4.md)
-- [Grandma Exploit](entities/concept-grandma-exploit.md)
-- [Graph Neural Network (GNN)](entities/concept-graph-neural-network-gnn.md)
-- [Graphiti](entities/concept-graphiti.md)
-- [GraphRAG](entities/concept-graphrag.md)
-- [GSM8K](entities/concept-gsm8k.md)
-- [hallucination cascade](entities/concept-hallucination-cascade.md)
-- [Hallucination Detection](entities/concept-hallucination-detection.md)
-- [Hallucination](entities/concept-hallucination.md)
-- [Healthcare](entities/concept-healthcare.md)
-- [Hegselmann-Krause bounded assimilation theory](entities/concept-hegselmann-krause-bounded-assimilation-theory.md)
-- [Hegselmann-Krause (HK) model](entities/concept-hegselmann-krause-hk-model.md)
-- [Hoare-style contract](entities/concept-hoare-style-contract.md)
-- [homeostasis](entities/concept-homeostasis.md)
-- [HomerAgents](entities/concept-homeragents.md)
-- [HumanEval](entities/concept-humaneval.md)
-- [i-attention](entities/concept-i-attention.md)
-- [IfWorld](entities/concept-ifworld.md)
-- [Indirect Prompt Injection (XPIA)](entities/concept-indirect-prompt-injection-xpia.md)
-- [Infini-attention](entities/concept-infini-attention.md)
-- [Infinity Illusion](entities/concept-infinity-illusion.md)
-- [Information Extraction (NER)](entities/concept-information-extraction-ner.md)
-- [Information Flow Invariants](entities/concept-information-flow-invariants.md)
-- [Information Physics](entities/concept-information-physics.md)
-- [Information Seeking Loop](entities/concept-information-seeking-loop.md)
-- [Institutional AI](entities/concept-institutional-ai.md)
-- [Instrumental Override](entities/concept-instrumental-override.md)
-- [Interaction Layer](entities/concept-interaction-layer.md)
-- [Interventional Testing](entities/concept-interventional-testing.md)
-- [intrinsic value](entities/concept-intrinsic-value.md)
-- [Invariant](entities/concept-invariant.md)
-- [Just-in-Time (JIT) Retrieval](entities/concept-just-in-time-jit-retrieval.md)
-- [Knowledge-Graph Based RAG System](entities/concept-knowledge-graph-based-rag-system.md)
-- [LangChain](entities/concept-langchain.md)
-- [Langfuse](entities/concept-langfuse.md)
-- [LangSmith](entities/concept-langsmith.md)
-- [Large Language Models (LLMs)](entities/concept-large-language-models-llms.md)
-- [Large Language Models](entities/concept-large-language-models.md)
-- [Large Reasoning Models](entities/concept-large-reasoning-models.md)
-- [Leetspeak](entities/concept-leetspeak.md)
-- [legal document summarization](entities/concept-legal-document-summarization.md)
-- [LlamaIndex](entities/concept-llamaindex.md)
-- [LLM Agents](entities/concept-llm-agents.md)
-- [LLM-as-a-Judge](entities/concept-llm-as-a-judge.md)
-- [LLM](entities/concept-llm.md)
-- [LLMs](entities/concept-llms.md)
-- [LoCoMo dataset](entities/concept-locomo-dataset.md)
-- [Logit-Based Calibration](entities/concept-logit-based-calibration.md)
-- [Long-Horizon Reasoning](entities/concept-long-horizon-reasoning.md)
-- [LongMemEval](entities/concept-longmemeval.md)
-- [Look-Ahead module](entities/concept-look-ahead-module.md)
-- [Loong](entities/concept-loong.md)
-- [Lost in the Middle: How Language Models Use Long Contexts](entities/concept-lost-in-the-middle-how-language-models-use-long-contexts.md)
-- [Lost in the Middle](entities/concept-lost-in-the-middle.md)
-- [MAPE](entities/concept-mape.md)
-- [MASE](entities/concept-mase.md)
-- [MAX_RETRIES](entities/concept-max-retries.md)
-- [Maximal Visual Similarity](entities/concept-maximal-visual-similarity.md)
-- [mechanism design](entities/concept-mechanism-design.md)
-- [MemGPT](entities/concept-memgpt.md)
-- [Memory-as-Code](entities/concept-memory-as-code.md)
-- [Memory Bank](entities/concept-memory-bank.md)
-- [memory tokens](entities/concept-memory-tokens.md)
-- [MemoryOS](entities/concept-memoryos.md)
-- [Merge](entities/concept-merge.md)
-- [Metrics](entities/concept-metrics.md)
-- [Micro-Worlds](entities/concept-micro-worlds.md)
-- [Middle Trough](entities/concept-middle-trough.md)
-- [MLOps Retraining Loop](entities/concept-mlops-retraining-loop.md)
-- [MLOps](entities/concept-mlops.md)
-- [Model Context Protocol (MCP)](entities/concept-model-context-protocol-mcp.md)
-- [Model Drift](entities/concept-model-drift.md)
-- [Monte Carlo (MC) Dropout](entities/concept-monte-carlo-mc-dropout.md)
-- [multi-agent systems](entities/concept-multi-agent-systems.md)
-- [Multi-hop Reasoning](entities/concept-multi-hop-reasoning.md)
-- [Multi-Hop Semantic Matching](entities/concept-multi-hop-semantic-matching.md)
-- [Myers-Briggs Type Indicator (MBTI)](entities/concept-myers-briggs-type-indicator-mbti.md)
-- [Needle In A Haystack (NIAH)](entities/concept-needle-in-a-haystack-niah.md)
-- [network topologies](entities/concept-network-topologies.md)
-- [Normative Evaluation](entities/concept-normative-evaluation.md)
-- [OdysseyBench](entities/concept-odysseybench.md)
-- [OpenAgentSafety](entities/concept-openagentsafety.md)
-- [OpenTelemetry tracing](entities/concept-opentelemetry-tracing.md)
-- [OpenTelemetry](entities/concept-opentelemetry.md)
-- [Optical Character Recognition (OCR)](entities/concept-optical-character-recognition-ocr.md)
-- [Orchestrator](entities/concept-orchestrator.md)
-- [Order-to-Cash process](entities/concept-order-to-cash-process.md)
-- [ostcondition](entities/concept-ostcondition.md)
-- [OT](entities/concept-ot.md)
-- [Parametric Memory](entities/concept-parametric-memory.md)
-- [PERSONA Bench framework](entities/concept-persona-bench-framework.md)
-- [Persona](entities/concept-persona.md)
-- [PersonaGym framework](entities/concept-personagym-framework.md)
-- [PersonaGym](entities/concept-personagym.md)
-- [PersonaMatrix](entities/concept-personamatrix.md)
-- [PersonaScore](entities/concept-personascore.md)
-- [Phoenix](entities/concept-phoenix.md)
-- [Physical Assets](entities/concept-physical-assets.md)
-- [Plan Adherence](entities/concept-plan-adherence.md)
-- [Plan Mode](entities/concept-plan-mode.md)
-- [Plan Quality](entities/concept-plan-quality.md)
-- [Plan vs Act modes](entities/concept-plan-vs-act-modes.md)
-- [Plan vs. Act](entities/concept-plan-vs-act.md)
-- [POMDP](entities/concept-pomdp.md)
-- [Precision](entities/concept-precision.md)
-- [Prescriptive Evaluation](entities/concept-prescriptive-evaluation.md)
-- [Primacy Bias](entities/concept-primacy-bias.md)
-- [Primacy/Recency Bias](entities/concept-primacy-recency-bias.md)
-- [Principal Component Analysis (PCA)](entities/concept-principal-component-analysis-pca.md)
-- [Prize-Collecting Steiner Tree (PCST)](entities/concept-prize-collecting-steiner-tree-pcst.md)
-- [Procedural and Temporal Memory Graphs](entities/concept-procedural-and-temporal-memory-graphs.md)
-- [Procedural Content Generation (PCG)](entities/concept-procedural-content-generation-pcg.md)
-- [Process Digital Twin](entities/concept-process-digital-twin.md)
-- [productContext.md](entities/concept-productcontext-md.md)
-- [progress.md](entities/concept-progress-md.md)
-- [projectbrief.md](entities/concept-projectbrief-md.md)
-- [Prompt Engineering](entities/concept-prompt-engineering.md)
-- [Prompt Sandwiching](entities/concept-prompt-sandwiching.md)
-- [PyRIT](entities/concept-pyrit.md)
-- [Q-Learning](entities/concept-q-learning.md)
-- [Question Answering (FinQA, TATQA)](entities/concept-question-answering-finqa-tatqa.md)
-- [RAG](entities/concept-rag.md)
-- [Ragas](entities/concept-ragas.md)
-- [Recall](entities/concept-recall.md)
-- [Recency Bias](entities/concept-recency-bias.md)
-- [Recoverability](entities/concept-recoverability.md)
-- [Red Team](entities/concept-red-team.md)
-- [Reinforcement Learning](entities/concept-reinforcement-learning.md)
-- [Reliability Engineering](entities/concept-reliability-engineering.md)
-- [Reliability Gap](entities/concept-reliability-gap.md)
-- [Retrieval-Augmented Generation (RAG)](entities/concept-retrieval-augmented-generation-rag.md)
-- [Revert](entities/concept-revert.md)
-- [Risk Management](entities/concept-risk-management.md)
-- [RLHF](entities/concept-rlhf.md)
-- [RMSE](entities/concept-rmse.md)
-- [ROC-AUC](entities/concept-roc-auc.md)
-- [ROS](entities/concept-ros.md)
-- [ROT13 ciphers](entities/concept-rot13-ciphers.md)
-- [ROUGE](entities/concept-rouge.md)
-- [Runtime Verification Layer](entities/concept-runtime-verification-layer.md)
-- [Safety Invariants](entities/concept-safety-invariants.md)
-- [SAGE-Agent](entities/concept-sage-agent.md)
-- [Saturation Hallucinations](entities/concept-saturation-hallucinations.md)
-- [Scratchpad](entities/concept-scratchpad.md)
-- [Semantic Entity Graph](entities/concept-semantic-entity-graph.md)
-- [Semantic entropy](entities/concept-semantic-entropy.md)
-- [Sentiment Analysis Models](entities/concept-sentiment-analysis-models.md)
-- [Sentiment Contagion](entities/concept-sentiment-contagion.md)
-- [Shadow Mode](entities/concept-shadow-mode.md)
-- [silent failure](entities/concept-silent-failure.md)
-- [Simulator Agent](entities/concept-simulator-agent.md)
-- [Software Reliability Engineering](entities/concept-software-reliability-engineering.md)
-- [Solution Architect](entities/concept-solution-architect.md)
-- [SoMoSiMuBench](entities/concept-somosimubench.md)
-- [Spanish](entities/concept-spanish.md)
-- [SRICE](entities/concept-srice.md)
-- [Staging Environment](entities/concept-staging-environment.md)
-- [State Invariants](entities/concept-state-invariants.md)
-- [State Machine](entities/concept-state-machine.md)
-- [State Space Explosion](entities/concept-state-space-explosion.md)
-- [Stateful Mocks](entities/concept-stateful-mocks.md)
-- [Structured Uncertainty](entities/concept-structured-uncertainty.md)
-- [Super Hallucination](entities/concept-super-hallucination.md)
-- [Supply Chain Attacks](entities/concept-supply-chain-attacks.md)
-- [Synthetic Databases](entities/concept-synthetic-databases.md)
-- [System Agent](entities/concept-system-agent.md)
-- [systemPatterns.md](entities/concept-systempatterns-md.md)
-- [techContext.md](entities/concept-techcontext-md.md)
-- [Temporal Layer](entities/concept-temporal-layer.md)
-- [Test Case Validation Agents](entities/concept-test-case-validation-agents.md)
-- [Textual Analysis](entities/concept-textual-analysis.md)
-- [Theoretical neuroscience](entities/concept-theoretical-neuroscience.md)
-- [Time Series Forecasting](entities/concept-time-series-forecasting.md)
-- [Titans](entities/concept-titans.md)
-- [TLA+](entities/concept-tla.md)
-- [Token-Level Entropy](entities/concept-token-level-entropy.md)
-- [Token Overflows](entities/concept-token-overflows.md)
-- [Tool Poisoning](entities/concept-tool-poisoning.md)
-- [Tool Selection Quality](entities/concept-tool-selection-quality.md)
-- [ToolGate](entities/concept-toolgate.md)
-- [trajectory](entities/concept-trajectory.md)
-- [Transformer-based LLMs](entities/concept-transformer-based-llms.md)
-- [Transformer](entities/concept-transformer.md)
-- [Transition Invariants](entities/concept-transition-invariants.md)
-- [Trough of Performance Degradation](entities/concept-trough-of-performance-degradation.md)
-- [U-shaped performance curve](entities/concept-u-shaped-performance-curve.md)
-- [Ultra Context](entities/concept-ultra-context.md)
-- [Uncertainty Estimation Methods](entities/concept-uncertainty-estimation-methods.md)
-- [Uncertainty Quantification](entities/concept-uncertainty-quantification.md)
-- [User Agent](entities/concept-user-agent.md)
-- [variational free energy](entities/concept-variational-free-energy.md)
-- [Visual Counterfactuals](entities/concept-visual-counterfactuals.md)
-- [WallStreetBets (WSBS)](entities/concept-wallstreetbets-wsbs.md)
-- [WESE](entities/concept-wese.md)
-- [Z3](entities/concept-z3.md)
-- [Zep-powered knowledge graph](entities/concept-zep-powered-knowledge-graph.md)
-- [Zep](entities/concept-zep.md)
-- [10th International Conference on Computational Social Science](entities/event-10th-international-conference-on-computational-social-science.md)
-- [August to October 2025](entities/event-august-to-october-2025.md)
-- [BlackLivesMatter](entities/event-blacklivesmatter.md)
-- [ICML](entities/event-icml.md)
-- [MeToo](entities/event-metoo.md)
-- [Roe v. Wade](entities/event-roe-v-wade.md)
-- [The 2024 Conference on Empirical Methods in Natural Language Processing](entities/event-the-2024-conference-on-empirical-methods-in-natural-language-processing.md)
-- [Accenture](entities/org-accenture.md)
-- [ACL Anthology](entities/org-acl-anthology.md)
-- [AgentOps.ai](entities/org-agentops-ai.md)
-- [AgentOps](entities/org-agentops.md)
-- [AI x Product](entities/org-ai-x-product.md)
-- [Airflow](entities/org-airflow.md)
-- [Akira AI](entities/org-akira-ai.md)
-- [Alan Turing Institute](entities/org-alan-turing-institute.md)
-- [Alibaba Qwen-plus](entities/org-alibaba-qwen-plus.md)
-- [Analytics Vidhya](entities/org-analytics-vidhya.md)
-- [Anthropic](entities/org-anthropic.md)
-- [AnyLogic](entities/org-anylogic.md)
-- [Arize AI](entities/org-arize-ai.md)
-- [Arize Phoenix](entities/org-arize-phoenix.md)
-- [arXiv.org](entities/org-arxiv-org.md)
-- [arXiv](entities/org-arxiv.md)
-- [AutoMalTool](entities/org-automaltool.md)
-- [Braintrust](entities/org-braintrust.md)
-- [byterover.dev](entities/org-byterover-dev.md)
-- [Cambridge University Press](entities/org-cambridge-university-press.md)
-- [Camunda](entities/org-camunda.md)
-- [Capgemini Invent Lab](entities/org-capgemini-invent-lab.md)
-- [Chroma Research](entities/org-chroma-research.md)
-- [Claude-1.3](entities/org-claude-1-3.md)
-- [Claude-3.5-haiku](entities/org-claude-3-5-haiku.md)
-- [Claude 3.5](entities/org-claude-3-5.md)
-- [Claude](entities/org-claude.md)
-- [Cline](entities/org-cline.md)
-- [Confident AI](entities/org-confident-ai.md)
-- [Cursor](entities/org-cursor.md)
-- [CybertLabs](entities/org-cybertlabs.md)
-- [Databricks](entities/org-databricks.md)
-- [DataRobot](entities/org-datarobot.md)
-- [Deepchecks](entities/org-deepchecks.md)
-- [DEV Community](entities/org-dev-community.md)
-- [Devin](entities/org-devin.md)
-- [Emergent Mind](entities/org-emergent-mind.md)
-- [Energent.ai](entities/org-energent-ai.md)
-- [Focal](entities/org-focal.md)
-- [Galileo](entities/org-galileo.md)
-- [Gemini-2.0-flash](entities/org-gemini-2-0-flash.md)
-- [Giskard](entities/org-giskard.md)
-- [GitHub Actions](entities/org-github-actions.md)
-- [GitHub](entities/org-github.md)
-- [Google Search](entities/org-google-search.md)
-- [Google](entities/org-google.md)
-- [GPT-3.5-Turbo](entities/org-gpt-3-5-turbo.md)
-- [GPT-4.1](entities/org-gpt-4-1.md)
-- [GPT-4](entities/org-gpt-4.md)
-- [Graphiti](entities/org-graphiti.md)
-- [HoneyHive](entities/org-honeyhive.md)
-- [IBM](entities/org-ibm.md)
-- [InfoQ](entities/org-infoq.md)
-- [Insight Maker](entities/org-insight-maker.md)
-- [JADE (Java Agent Development Framework)](entities/org-jade-java-agent-development-framework.md)
-- [Kubernetes](entities/org-kubernetes.md)
-- [Lablab.ai](entities/org-lablab-ai.md)
-- [LangChain](entities/org-langchain.md)
-- [Langfuse](entities/org-langfuse.md)
-- [LangSmith](entities/org-langsmith.md)
-- [LangWatch](entities/org-langwatch.md)
-- [Liner](entities/org-liner.md)
-- [LLaMA-3-8B](entities/org-llama-3-8b.md)
-- [LocalStack](entities/org-localstack.md)
-- [Mabl](entities/org-mabl.md)
-- [Maxim AI](entities/org-maxim-ai.md)
-- [Medium](entities/org-medium.md)
-- [Mesa](entities/org-mesa.md)
-- [Microsoft PyRIT](entities/org-microsoft-pyrit.md)
-- [Microsoft Research](entities/org-microsoft-research.md)
-- [Microsoft](entities/org-microsoft.md)
-- [Milvus](entities/org-milvus.md)
-- [MiroFish](entities/org-mirofish.md)
-- [Mistral AI](entities/org-mistral-ai.md)
-- [MIT Press Direct](entities/org-mit-press-direct.md)
-- [MLflow](entities/org-mlflow.md)
-- [MuleSoft Vibes](entities/org-mulesoft-vibes.md)
-- [MuleSoft](entities/org-mulesoft.md)
-- [Neo4j](entities/org-neo4j.md)
-- [NetLogo](entities/org-netlogo.md)
-- [NIH](entities/org-nih.md)
-- [NVIDIA Technical Blog](entities/org-nvidia-technical-blog.md)
-- [OA-Safety](entities/org-oa-safety.md)
-- [OASIS simulation engine](entities/org-oasis-simulation-engine.md)
-- [Open FinLLM Leaderboard](entities/org-open-finllm-leaderboard.md)
-- [OpenAI SDK](entities/org-openai-sdk.md)
-- [OpenAI](entities/org-openai.md)
-- [OpenDevin](entities/org-opendevin.md)
-- [OpenHands](entities/org-openhands.md)
-- [OpenReview](entities/org-openreview.md)
-- [OpenTelemetry](entities/org-opentelemetry.md)
-- [Patronus AI](entities/org-patronus-ai.md)
-- [Phoenix Strategy Group](entities/org-phoenix-strategy-group.md)
-- [Pymdp](entities/org-pymdp.md)
-- [PyTorch](entities/org-pytorch.md)
-- [Ragas](entities/org-ragas.md)
-- [Reddit](entities/org-reddit.md)
-- [Redis](entities/org-redis.md)
-- [Repast](entities/org-repast.md)
-- [ResearchGate](entities/org-researchgate.md)
-- [Salesforce Ben](entities/org-salesforce-ben.md)
-- [SAP Signavio](entities/org-sap-signavio.md)
-- [SAP](entities/org-sap.md)
-- [Simio](entities/org-simio.md)
-- [Snowflake](entities/org-snowflake.md)
-- [SQLite](entities/org-sqlite.md)
-- [Stanford](entities/org-stanford.md)
-- [SUMO](entities/org-sumo.md)
-- [Tata Steel](entities/org-tata-steel.md)
-- [Tech for Humans](entities/org-tech-for-humans.md)
-- [Temporal](entities/org-temporal.md)
-- [UltraContext](entities/org-ultracontext.md)
-- [Virtuoso QA](entities/org-virtuoso-qa.md)
-- [VirtuosoQA](entities/org-virtuosoqa.md)
-- [WireMock](entities/org-wiremock.md)
-- [YouTube](entities/org-youtube.md)
-- [Zep](entities/org-zep.md)
-- [ZeroEntropy](entities/org-zeroentropy.md)
-- [Aayushmaan Hooda](entities/person-aayushmaan-hooda.md)
-- [bijit211987](entities/person-bijit211987.md)
-- [Eshban Suleman](entities/person-eshban-suleman.md)
-- [Fabio](entities/person-fabio.md)
-- [Faustin Pulvéric](entities/person-faustin-pulv-ric.md)
-- [Hamel Husain](entities/person-hamel-husain.md)
-- [jazir555](entities/person-jazir555.md)
-- [Karol Zak](entities/person-karol-zak.md)
-- [kuldeep_paul](entities/person-kuldeep-paul.md)
-- [Leo Lin](entities/person-leo-lin.md)
-- [Liu et al.](entities/person-liu-et-al.md)
-- [Oluwatomisin](entities/person-oluwatomisin.md)
-- [Rainer Hegselmann](entities/person-rainer-hegselmann.md)
-- [T1nker-1220](entities/person-t1nker-1220.md)
-- [Ulrich Krause](entities/person-ulrich-krause.md)
-- [whynesspower](entities/person-whynesspower.md)
-- [finance](entities/place-finance.md)
-- [France](entities/place-france.md)
-- [healthcare](entities/place-healthcare.md)
-- [UK's airspace](entities/place-uk-s-airspace.md)
-- [WebArena-Lite](entities/place-webarena-lite.md)
+- [60% Performance Wall](entities/concept-60-performance-wall.md) - Auto-generated entity page for 60% Performance Wall (CONCEPT); appears in 1 wiki page(s).
+- [60% Wall](entities/concept-60-wall.md) - Auto-generated entity page for 60% Wall (CONCEPT); appears in 1 wiki page(s).
+- [Absence Detection](entities/concept-absence-detection.md) - Auto-generated entity page for Absence Detection (CONCEPT); appears in 1 wiki page(s).
+- [AbsenceBench](entities/concept-absencebench.md) - Auto-generated entity page for AbsenceBench (CONCEPT); appears in 1 wiki page(s).
+- [Act Mode](entities/concept-act-mode.md) - Auto-generated entity page for Act Mode (CONCEPT); appears in 1 wiki page(s).
+- [Active Inference](entities/concept-active-inference.md) - Auto-generated entity page for Active Inference (CONCEPT); appears in 1 wiki page(s).
+- [activeContext.md](entities/concept-activecontext-md.md) - Auto-generated entity page for activeContext.md (CONCEPT); appears in 1 wiki page(s).
+- [Adaptive Observability (Live Evaluation)](entities/concept-adaptive-observability-live-evaluation.md) - Auto-generated entity page for Adaptive Observability (Live Evaluation) (CONCEPT); appears in 1 wiki page(s).
+- [Agent-based models (ABMs)](entities/concept-agent-based-models-abms.md) - Auto-generated entity page for Agent-based models (ABMs) (CONCEPT); appears in 1 wiki page(s).
+- [Agentic Systems](entities/concept-agentic-systems.md) - Auto-generated entity page for Agentic Systems (CONCEPT); appears in 1 wiki page(s).
+- [agentic workflows](entities/concept-agentic-workflows.md) - Auto-generated entity page for agentic workflows (CONCEPT); appears in 1 wiki page(s).
+- [AgentOps](entities/concept-agentops.md) - Auto-generated entity page for AgentOps (CONCEPT); appears in 2 wiki page(s).
+- [AGI Safety](entities/concept-agi-safety.md) - Auto-generated entity page for AGI Safety (CONCEPT); appears in 1 wiki page(s).
+- [AI Agent Drift](entities/concept-ai-agent-drift.md) - Auto-generated entity page for AI Agent Drift (CONCEPT); appears in 1 wiki page(s).
+- [AI Agents](entities/concept-ai-agents.md) - Auto-generated entity page for AI Agents (CONCEPT); appears in 3 wiki page(s).
+- [AI Search](entities/concept-ai-search.md) - Auto-generated entity page for AI Search (CONCEPT); appears in 1 wiki page(s).
+- [AI Security](entities/concept-ai-security.md) - Auto-generated entity page for AI Security (CONCEPT); appears in 1 wiki page(s).
+- [AI](entities/concept-ai.md) - Auto-generated entity page for AI (CONCEPT); appears in 1 wiki page(s).
+- [Annotators' Instruction Assisted Prompt (AIAP)](entities/concept-annotators-instruction-assisted-prompt-aiap.md) - Auto-generated entity page for Annotators' Instruction Assisted Prompt (AIAP) (CONCEPT); appears in 1 wiki page(s).
+- [Answer Relevancy](entities/concept-answer-relevancy.md) - Auto-generated entity page for Answer Relevancy (CONCEPT); appears in 1 wiki page(s).
+- [API](entities/concept-api.md) - Auto-generated entity page for API (CONCEPT); appears in 1 wiki page(s).
+- [Architect](entities/concept-architect.md) - Auto-generated entity page for Architect (CONCEPT); appears in 1 wiki page(s).
+- [Arize AX](entities/concept-arize-ax.md) - Auto-generated entity page for Arize AX (CONCEPT); appears in 1 wiki page(s).
+- [ATLAS](entities/concept-atlas.md) - Auto-generated entity page for ATLAS (CONCEPT); appears in 1 wiki page(s).
+- [Attention Dilution](entities/concept-attention-dilution.md) - Auto-generated entity page for Attention Dilution (CONCEPT); appears in 1 wiki page(s).
+- [Autoformalization](entities/concept-autoformalization.md) - Auto-generated entity page for Autoformalization (CONCEPT); appears in 1 wiki page(s).
+- [AutoGen](entities/concept-autogen.md) - Auto-generated entity page for AutoGen (CONCEPT); appears in 1 wiki page(s).
+- [AutoMalTool](entities/concept-automaltool.md) - Auto-generated entity page for AutoMalTool (CONCEPT); appears in 1 wiki page(s).
+- [Automated Red Teaming](entities/concept-automated-red-teaming.md) - Auto-generated entity page for Automated Red Teaming (CONCEPT); appears in 1 wiki page(s).
+- [autonomous agent](entities/concept-autonomous-agent.md) - Auto-generated entity page for autonomous agent (CONCEPT); appears in 1 wiki page(s).
+- [Autonomous Decision-Making](entities/concept-autonomous-decision-making.md) - Auto-generated entity page for Autonomous Decision-Making (CONCEPT); appears in 1 wiki page(s).
+- [bad bootstrap](entities/concept-bad-bootstrap.md) - Auto-generated entity page for bad bootstrap (CONCEPT); appears in 1 wiki page(s).
+- [Base64 encoding](entities/concept-base64-encoding.md) - Auto-generated entity page for Base64 encoding (CONCEPT); appears in 1 wiki page(s).
+- [Behavioral Goal-Independence](entities/concept-behavioral-goal-independence.md) - Auto-generated entity page for Behavioral Goal-Independence (CONCEPT); appears in 1 wiki page(s).
+- [BLEU](entities/concept-bleu.md) - Auto-generated entity page for BLEU (CONCEPT); appears in 1 wiki page(s).
+- [BPMN](entities/concept-bpmn.md) - Auto-generated entity page for BPMN (CONCEPT); appears in 1 wiki page(s).
+- [Branch](entities/concept-branch.md) - Auto-generated entity page for Branch (CONCEPT); appears in 1 wiki page(s).
+- [Business Invariants](entities/concept-business-invariants.md) - Auto-generated entity page for Business Invariants (CONCEPT); appears in 1 wiki page(s).
+- [Business Process Management (BPM)](entities/concept-business-process-management-bpm.md) - Auto-generated entity page for Business Process Management (BPM) (CONCEPT); appears in 1 wiki page(s).
+- [Canary Analysis](entities/concept-canary-analysis.md) - Auto-generated entity page for Canary Analysis (CONCEPT); appears in 1 wiki page(s).
+- [Causal Classification](entities/concept-causal-classification.md) - Auto-generated entity page for Causal Classification (CONCEPT); appears in 1 wiki page(s).
+- [Causal Graph](entities/concept-causal-graph.md) - Auto-generated entity page for Causal Graph (CONCEPT); appears in 1 wiki page(s).
+- [Chaos Monkey](entities/concept-chaos-monkey.md) - Auto-generated entity page for Chaos Monkey (CONCEPT); appears in 1 wiki page(s).
+- [Chaos Proxy](entities/concept-chaos-proxy.md) - Auto-generated entity page for Chaos Proxy (CONCEPT); appears in 1 wiki page(s).
+- [Chinese](entities/concept-chinese.md) - Auto-generated entity page for Chinese (CONCEPT); appears in 1 wiki page(s).
+- [CI/CD pipeline](entities/concept-ci-cd-pipeline.md) - Auto-generated entity page for CI/CD pipeline (CONCEPT); appears in 1 wiki page(s).
+- [Claude 3](entities/concept-claude-3.md) - Auto-generated entity page for Claude 3 (CONCEPT); appears in 1 wiki page(s).
+- [Claude Dev](entities/concept-claude-dev.md) - Auto-generated entity page for Claude Dev (CONCEPT); appears in 1 wiki page(s).
+- [Claude](entities/concept-claude.md) - Auto-generated entity page for Claude (CONCEPT); appears in 1 wiki page(s).
+- [Cline](entities/concept-cline.md) - Auto-generated entity page for Cline (CONCEPT); appears in 1 wiki page(s).
+- [Clustering Number](entities/concept-clustering-number.md) - Auto-generated entity page for Clustering Number (CONCEPT); appears in 1 wiki page(s).
+- [Code](entities/concept-code.md) - Auto-generated entity page for Code (CONCEPT); appears in 1 wiki page(s).
+- [CoinRun](entities/concept-coinrun.md) - Auto-generated entity page for CoinRun (CONCEPT); appears in 1 wiki page(s).
+- [Commit](entities/concept-commit.md) - Auto-generated entity page for Commit (CONCEPT); appears in 1 wiki page(s).
+- [Community-Based Semantic Overlap](entities/concept-community-based-semantic-overlap.md) - Auto-generated entity page for Community-Based Semantic Overlap (CONCEPT); appears in 1 wiki page(s).
+- [Computational Autopoiesis](entities/concept-computational-autopoiesis.md) - Auto-generated entity page for Computational Autopoiesis (CONCEPT); appears in 1 wiki page(s).
+- [Concept Drift](entities/concept-concept-drift.md) - Auto-generated entity page for Concept Drift (CONCEPT); appears in 2 wiki page(s).
+- [conceptual space](entities/concept-conceptual-space.md) - Auto-generated entity page for conceptual space (CONCEPT); appears in 1 wiki page(s).
+- [Confidence Score](entities/concept-confidence-score.md) - Auto-generated entity page for Confidence Score (CONCEPT); appears in 1 wiki page(s).
+- [ConsistencyAI benchmark](entities/concept-consistencyai-benchmark.md) - Auto-generated entity page for ConsistencyAI benchmark (CONCEPT); appears in 1 wiki page(s).
+- [Context API](entities/concept-context-api.md) - Auto-generated entity page for Context API (CONCEPT); appears in 1 wiki page(s).
+- [Context Engineering](entities/concept-context-engineering.md) - Auto-generated entity page for Context Engineering (CONCEPT); appears in 1 wiki page(s).
+- [Context-Parametric Conflict](entities/concept-context-parametric-conflict.md) - Auto-generated entity page for Context-Parametric Conflict (CONCEPT); appears in 1 wiki page(s).
+- [Context Precision](entities/concept-context-precision.md) - Auto-generated entity page for Context Precision (CONCEPT); appears in 1 wiki page(s).
+- [Context Recall](entities/concept-context-recall.md) - Auto-generated entity page for Context Recall (CONCEPT); appears in 1 wiki page(s).
+- [Context Rot](entities/concept-context-rot.md) - Auto-generated entity page for Context Rot (CONCEPT); appears in 1 wiki page(s).
+- [Context Saturation](entities/concept-context-saturation.md) - Auto-generated entity page for Context Saturation (CONCEPT); appears in 1 wiki page(s).
+- [Convergence Speed](entities/concept-convergence-speed.md) - Auto-generated entity page for Convergence Speed (CONCEPT); appears in 1 wiki page(s).
+- [Cosine Similarity](entities/concept-cosine-similarity.md) - Auto-generated entity page for Cosine Similarity (CONCEPT); appears in 1 wiki page(s).
+- [Counterfactual Challenge Levels](entities/concept-counterfactual-challenge-levels.md) - Auto-generated entity page for Counterfactual Challenge Levels (CONCEPT); appears in 1 wiki page(s).
+- [counterfactual testing strategies](entities/concept-counterfactual-testing-strategies.md) - Auto-generated entity page for counterfactual testing strategies (CONCEPT); appears in 1 wiki page(s).
+- [Counterfactual Testing](entities/concept-counterfactual-testing.md) - Auto-generated entity page for Counterfactual Testing (CONCEPT); appears in 1 wiki page(s).
+- [CrewAI](entities/concept-crewai.md) - Auto-generated entity page for CrewAI (CONCEPT); appears in 1 wiki page(s).
+- [Critique Shadowing](entities/concept-critique-shadowing.md) - Auto-generated entity page for Critique Shadowing (CONCEPT); appears in 1 wiki page(s).
+- [Cross-Encoder](entities/concept-cross-encoder.md) - Auto-generated entity page for Cross-Encoder (CONCEPT); appears in 1 wiki page(s).
+- [curiosity](entities/concept-curiosity.md) - Auto-generated entity page for curiosity (CONCEPT); appears in 1 wiki page(s).
+- [DAN](entities/concept-dan.md) - Auto-generated entity page for DAN (CONCEPT); appears in 1 wiki page(s).
+- [Data Drift](entities/concept-data-drift.md) - Auto-generated entity page for Data Drift (CONCEPT); appears in 1 wiki page(s).
+- [decision theory](entities/concept-decision-theory.md) - Auto-generated entity page for decision theory (CONCEPT); appears in 1 wiki page(s).
+- [Deep Memory Retrieval (DMR)](entities/concept-deep-memory-retrieval-dmr.md) - Auto-generated entity page for Deep Memory Retrieval (DMR) (CONCEPT); appears in 1 wiki page(s).
+- [Descriptive Evaluation](entities/concept-descriptive-evaluation.md) - Auto-generated entity page for Descriptive Evaluation (CONCEPT); appears in 1 wiki page(s).
+- [Diffusion Models](entities/concept-diffusion-models.md) - Auto-generated entity page for Diffusion Models (CONCEPT); appears in 1 wiki page(s).
+- [Digital Twin framework](entities/concept-digital-twin-framework.md) - Auto-generated entity page for Digital Twin framework (CONCEPT); appears in 1 wiki page(s).
+- [Digital Twin of an Organization (DTO)](entities/concept-digital-twin-of-an-organization-dto.md) - Auto-generated entity page for Digital Twin of an Organization (DTO) (CONCEPT); appears in 1 wiki page(s).
+- [Digital Twin Simulation Framework](entities/concept-digital-twin-simulation-framework.md) - Auto-generated entity page for Digital Twin Simulation Framework (CONCEPT); appears in 1 wiki page(s).
+- [Digital Twin](entities/concept-digital-twin.md) - Auto-generated entity page for Digital Twin (CONCEPT); appears in 1 wiki page(s).
+- [distributed architectures](entities/concept-distributed-architectures.md) - Auto-generated entity page for distributed architectures (CONCEPT); appears in 1 wiki page(s).
+- [Docker](entities/concept-docker.md) - Auto-generated entity page for Docker (CONCEPT); appears in 1 wiki page(s).
+- [Document Corpora](entities/concept-document-corpora.md) - Auto-generated entity page for Document Corpora (CONCEPT); appears in 1 wiki page(s).
+- [DSPy](entities/concept-dspy.md) - Auto-generated entity page for DSPy (CONCEPT); appears in 1 wiki page(s).
+- [Dual-Mode Operation Protocol](entities/concept-dual-mode-operation-protocol.md) - Auto-generated entity page for Dual-Mode Operation Protocol (CONCEPT); appears in 1 wiki page(s).
+- [Emergent Systemic Risk](entities/concept-emergent-systemic-risk.md) - Auto-generated entity page for Emergent Systemic Risk (CONCEPT); appears in 1 wiki page(s).
+- [entropy problem](entities/concept-entropy-problem.md) - Auto-generated entity page for entropy problem (CONCEPT); appears in 1 wiki page(s).
+- [Entropy](entities/concept-entropy.md) - Auto-generated entity page for Entropy (CONCEPT); appears in 1 wiki page(s).
+- [Environment Layer](entities/concept-environment-layer.md) - Auto-generated entity page for Environment Layer (CONCEPT); appears in 1 wiki page(s).
+- [Environment Simulator](entities/concept-environment-simulator.md) - Auto-generated entity page for Environment Simulator (CONCEPT); appears in 1 wiki page(s).
+- [Episodic Memory Graph](entities/concept-episodic-memory-graph.md) - Auto-generated entity page for Episodic Memory Graph (CONCEPT); appears in 1 wiki page(s).
+- [Epistemic Agent](entities/concept-epistemic-agent.md) - Auto-generated entity page for Epistemic Agent (CONCEPT); appears in 1 wiki page(s).
+- [Epistemic Value](entities/concept-epistemic-value.md) - Auto-generated entity page for Epistemic Value (CONCEPT); appears in 1 wiki page(s).
+- [Evaluator Agent](entities/concept-evaluator-agent.md) - Auto-generated entity page for Evaluator Agent (CONCEPT); appears in 1 wiki page(s).
+- [Expected Free Energy](entities/concept-expected-free-energy.md) - Auto-generated entity page for Expected Free Energy (CONCEPT); appears in 1 wiki page(s).
+- [Expected Value of Perfect Information](entities/concept-expected-value-of-perfect-information.md) - Auto-generated entity page for Expected Value of Perfect Information (CONCEPT); appears in 1 wiki page(s).
+- [External Hippocampus](entities/concept-external-hippocampus.md) - Auto-generated entity page for External Hippocampus (CONCEPT); appears in 1 wiki page(s).
+- [Extreme Values](entities/concept-extreme-values.md) - Auto-generated entity page for Extreme Values (CONCEPT); appears in 1 wiki page(s).
+- [Extrinsic Value](entities/concept-extrinsic-value.md) - Auto-generated entity page for Extrinsic Value (CONCEPT); appears in 1 wiki page(s).
+- [F1 Scores](entities/concept-f1-scores.md) - Auto-generated entity page for F1 Scores (CONCEPT); appears in 1 wiki page(s).
+- [Faithfulness (Groundedness)](entities/concept-faithfulness-groundedness.md) - Auto-generated entity page for Faithfulness (Groundedness) (CONCEPT); appears in 1 wiki page(s).
+- [Faithfulness](entities/concept-faithfulness.md) - Auto-generated entity page for Faithfulness (CONCEPT); appears in 1 wiki page(s).
+- [Finance, law, and healthcare](entities/concept-finance-law-and-healthcare.md) - Auto-generated entity page for Finance, law, and healthcare (CONCEPT); appears in 1 wiki page(s).
+- [Financial contagion](entities/concept-financial-contagion.md) - Auto-generated entity page for Financial contagion (CONCEPT); appears in 1 wiki page(s).
+- [Financial Forecasting Models](entities/concept-financial-forecasting-models.md) - Auto-generated entity page for Financial Forecasting Models (CONCEPT); appears in 1 wiki page(s).
+- [Financial Phrasebank](entities/concept-financial-phrasebank.md) - Auto-generated entity page for Financial Phrasebank (CONCEPT); appears in 1 wiki page(s).
+- [Financial Sentiment Analysis (FSA)](entities/concept-financial-sentiment-analysis-fsa.md) - Auto-generated entity page for Financial Sentiment Analysis (FSA) (CONCEPT); appears in 1 wiki page(s).
+- [FinTech](entities/concept-fintech.md) - Auto-generated entity page for FinTech (CONCEPT); appears in 1 wiki page(s).
+- [Five 9s](entities/concept-five-9s.md) - Auto-generated entity page for Five 9s (CONCEPT); appears in 1 wiki page(s).
+- [Formal Methods](entities/concept-formal-methods.md) - Auto-generated entity page for Formal Methods (CONCEPT); appears in 1 wiki page(s).
+- [Formal Verification](entities/concept-formal-verification.md) - Auto-generated entity page for Formal Verification (CONCEPT); appears in 1 wiki page(s).
+- [Free Energy Principle](entities/concept-free-energy-principle.md) - Auto-generated entity page for Free Energy Principle (CONCEPT); appears in 1 wiki page(s).
+- [Fuzzing](entities/concept-fuzzing.md) - Auto-generated entity page for Fuzzing (CONCEPT); appears in 1 wiki page(s).
+- [G-Retriever](entities/concept-g-retriever.md) - Auto-generated entity page for G-Retriever (CONCEPT); appears in 1 wiki page(s).
+- [G7 world leaders](entities/concept-g7-world-leaders.md) - Auto-generated entity page for G7 world leaders (CONCEPT); appears in 1 wiki page(s).
+- [Garbage Data](entities/concept-garbage-data.md) - Auto-generated entity page for Garbage Data (CONCEPT); appears in 1 wiki page(s).
+- [Gemini 1.5](entities/concept-gemini-1-5.md) - Auto-generated entity page for Gemini 1.5 (CONCEPT); appears in 1 wiki page(s).
+- [Generative Adversarial Networks (GANs)](entities/concept-generative-adversarial-networks-gans.md) - Auto-generated entity page for Generative Adversarial Networks (GANs) (CONCEPT); appears in 1 wiki page(s).
+- [Generative AI systems](entities/concept-generative-ai-systems.md) - Auto-generated entity page for Generative AI systems (CONCEPT); appears in 1 wiki page(s).
+- [generative model](entities/concept-generative-model.md) - Auto-generated entity page for generative model (CONCEPT); appears in 1 wiki page(s).
+- [governance graph](entities/concept-governance-graph.md) - Auto-generated entity page for governance graph (CONCEPT); appears in 1 wiki page(s).
+- [GPT-4](entities/concept-gpt-4.md) - Auto-generated entity page for GPT-4 (CONCEPT); appears in 2 wiki page(s).
+- [Grandma Exploit](entities/concept-grandma-exploit.md) - Auto-generated entity page for Grandma Exploit (CONCEPT); appears in 1 wiki page(s).
+- [Graph Neural Network (GNN)](entities/concept-graph-neural-network-gnn.md) - Auto-generated entity page for Graph Neural Network (GNN) (CONCEPT); appears in 1 wiki page(s).
+- [Graphiti](entities/concept-graphiti.md) - Auto-generated entity page for Graphiti (CONCEPT); appears in 1 wiki page(s).
+- [GraphRAG](entities/concept-graphrag.md) - Auto-generated entity page for GraphRAG (CONCEPT); appears in 1 wiki page(s).
+- [GSM8K](entities/concept-gsm8k.md) - Auto-generated entity page for GSM8K (CONCEPT); appears in 1 wiki page(s).
+- [hallucination cascade](entities/concept-hallucination-cascade.md) - Auto-generated entity page for hallucination cascade (CONCEPT); appears in 1 wiki page(s).
+- [Hallucination Detection](entities/concept-hallucination-detection.md) - Auto-generated entity page for Hallucination Detection (CONCEPT); appears in 1 wiki page(s).
+- [Hallucination](entities/concept-hallucination.md) - Auto-generated entity page for Hallucination (CONCEPT); appears in 1 wiki page(s).
+- [Healthcare](entities/concept-healthcare.md) - Auto-generated entity page for Healthcare (CONCEPT); appears in 1 wiki page(s).
+- [Hegselmann-Krause bounded assimilation theory](entities/concept-hegselmann-krause-bounded-assimilation-theory.md) - Auto-generated entity page for Hegselmann-Krause bounded assimilation theory (CONCEPT); appears in 1 wiki page(s).
+- [Hegselmann-Krause (HK) model](entities/concept-hegselmann-krause-hk-model.md) - Auto-generated entity page for Hegselmann-Krause (HK) model (CONCEPT); appears in 1 wiki page(s).
+- [Hoare-style contract](entities/concept-hoare-style-contract.md) - Auto-generated entity page for Hoare-style contract (CONCEPT); appears in 1 wiki page(s).
+- [homeostasis](entities/concept-homeostasis.md) - Auto-generated entity page for homeostasis (CONCEPT); appears in 1 wiki page(s).
+- [HomerAgents](entities/concept-homeragents.md) - Auto-generated entity page for HomerAgents (CONCEPT); appears in 1 wiki page(s).
+- [HumanEval](entities/concept-humaneval.md) - Auto-generated entity page for HumanEval (CONCEPT); appears in 1 wiki page(s).
+- [i-attention](entities/concept-i-attention.md) - Auto-generated entity page for i-attention (CONCEPT); appears in 1 wiki page(s).
+- [IfWorld](entities/concept-ifworld.md) - Auto-generated entity page for IfWorld (CONCEPT); appears in 1 wiki page(s).
+- [Indirect Prompt Injection (XPIA)](entities/concept-indirect-prompt-injection-xpia.md) - Auto-generated entity page for Indirect Prompt Injection (XPIA) (CONCEPT); appears in 1 wiki page(s).
+- [Infini-attention](entities/concept-infini-attention.md) - Auto-generated entity page for Infini-attention (CONCEPT); appears in 1 wiki page(s).
+- [Infinity Illusion](entities/concept-infinity-illusion.md) - Auto-generated entity page for Infinity Illusion (CONCEPT); appears in 1 wiki page(s).
+- [Information Extraction (NER)](entities/concept-information-extraction-ner.md) - Auto-generated entity page for Information Extraction (NER) (CONCEPT); appears in 1 wiki page(s).
+- [Information Flow Invariants](entities/concept-information-flow-invariants.md) - Auto-generated entity page for Information Flow Invariants (CONCEPT); appears in 1 wiki page(s).
+- [Information Physics](entities/concept-information-physics.md) - Auto-generated entity page for Information Physics (CONCEPT); appears in 1 wiki page(s).
+- [Information Seeking Loop](entities/concept-information-seeking-loop.md) - Auto-generated entity page for Information Seeking Loop (CONCEPT); appears in 1 wiki page(s).
+- [Institutional AI](entities/concept-institutional-ai.md) - Auto-generated entity page for Institutional AI (CONCEPT); appears in 1 wiki page(s).
+- [Instrumental Override](entities/concept-instrumental-override.md) - Auto-generated entity page for Instrumental Override (CONCEPT); appears in 1 wiki page(s).
+- [Interaction Layer](entities/concept-interaction-layer.md) - Auto-generated entity page for Interaction Layer (CONCEPT); appears in 1 wiki page(s).
+- [Interventional Testing](entities/concept-interventional-testing.md) - Auto-generated entity page for Interventional Testing (CONCEPT); appears in 1 wiki page(s).
+- [intrinsic value](entities/concept-intrinsic-value.md) - Auto-generated entity page for intrinsic value (CONCEPT); appears in 1 wiki page(s).
+- [Invariant](entities/concept-invariant.md) - Auto-generated entity page for Invariant (CONCEPT); appears in 1 wiki page(s).
+- [Just-in-Time (JIT) Retrieval](entities/concept-just-in-time-jit-retrieval.md) - Auto-generated entity page for Just-in-Time (JIT) Retrieval (CONCEPT); appears in 1 wiki page(s).
+- [Knowledge-Graph Based RAG System](entities/concept-knowledge-graph-based-rag-system.md) - Auto-generated entity page for Knowledge-Graph Based RAG System (CONCEPT); appears in 1 wiki page(s).
+- [LangChain](entities/concept-langchain.md) - Auto-generated entity page for LangChain (CONCEPT); appears in 1 wiki page(s).
+- [Langfuse](entities/concept-langfuse.md) - Auto-generated entity page for Langfuse (CONCEPT); appears in 1 wiki page(s).
+- [LangSmith](entities/concept-langsmith.md) - Auto-generated entity page for LangSmith (CONCEPT); appears in 1 wiki page(s).
+- [Large Language Models (LLMs)](entities/concept-large-language-models-llms.md) - Auto-generated entity page for Large Language Models (LLMs) (CONCEPT); appears in 3 wiki page(s).
+- [Large Language Models](entities/concept-large-language-models.md) - Auto-generated entity page for Large Language Models (CONCEPT); appears in 2 wiki page(s).
+- [Large Reasoning Models](entities/concept-large-reasoning-models.md) - Auto-generated entity page for Large Reasoning Models (CONCEPT); appears in 1 wiki page(s).
+- [Leetspeak](entities/concept-leetspeak.md) - Auto-generated entity page for Leetspeak (CONCEPT); appears in 1 wiki page(s).
+- [legal document summarization](entities/concept-legal-document-summarization.md) - Auto-generated entity page for legal document summarization (CONCEPT); appears in 1 wiki page(s).
+- [LlamaIndex](entities/concept-llamaindex.md) - Auto-generated entity page for LlamaIndex (CONCEPT); appears in 1 wiki page(s).
+- [LLM Agents](entities/concept-llm-agents.md) - Auto-generated entity page for LLM Agents (CONCEPT); appears in 1 wiki page(s).
+- [LLM-as-a-Judge](entities/concept-llm-as-a-judge.md) - Auto-generated entity page for LLM-as-a-Judge (CONCEPT); appears in 2 wiki page(s).
+- [LLM](entities/concept-llm.md) - Auto-generated entity page for LLM (CONCEPT); appears in 4 wiki page(s).
+- [LLMs](entities/concept-llms.md) - Auto-generated entity page for LLMs (CONCEPT); appears in 2 wiki page(s).
+- [LoCoMo dataset](entities/concept-locomo-dataset.md) - Auto-generated entity page for LoCoMo dataset (CONCEPT); appears in 1 wiki page(s).
+- [Logit-Based Calibration](entities/concept-logit-based-calibration.md) - Auto-generated entity page for Logit-Based Calibration (CONCEPT); appears in 1 wiki page(s).
+- [Long-Horizon Reasoning](entities/concept-long-horizon-reasoning.md) - Auto-generated entity page for Long-Horizon Reasoning (CONCEPT); appears in 1 wiki page(s).
+- [LongMemEval](entities/concept-longmemeval.md) - Auto-generated entity page for LongMemEval (CONCEPT); appears in 1 wiki page(s).
+- [Look-Ahead module](entities/concept-look-ahead-module.md) - Auto-generated entity page for Look-Ahead module (CONCEPT); appears in 1 wiki page(s).
+- [Loong](entities/concept-loong.md) - Auto-generated entity page for Loong (CONCEPT); appears in 1 wiki page(s).
+- [Lost in the Middle: How Language Models Use Long Contexts](entities/concept-lost-in-the-middle-how-language-models-use-long-contexts.md) - Auto-generated entity page for Lost in the Middle: How Language Models Use Long Contexts (CONCEPT); appears in 1 wiki page(s).
+- [Lost in the Middle](entities/concept-lost-in-the-middle.md) - Auto-generated entity page for Lost in the Middle (CONCEPT); appears in 1 wiki page(s).
+- [MAPE](entities/concept-mape.md) - Auto-generated entity page for MAPE (CONCEPT); appears in 1 wiki page(s).
+- [MASE](entities/concept-mase.md) - Auto-generated entity page for MASE (CONCEPT); appears in 1 wiki page(s).
+- [MAX_RETRIES](entities/concept-max-retries.md) - Auto-generated entity page for MAX_RETRIES (CONCEPT); appears in 1 wiki page(s).
+- [Maximal Visual Similarity](entities/concept-maximal-visual-similarity.md) - Auto-generated entity page for Maximal Visual Similarity (CONCEPT); appears in 1 wiki page(s).
+- [mechanism design](entities/concept-mechanism-design.md) - Auto-generated entity page for mechanism design (CONCEPT); appears in 1 wiki page(s).
+- [MemGPT](entities/concept-memgpt.md) - Auto-generated entity page for MemGPT (CONCEPT); appears in 1 wiki page(s).
+- [Memory-as-Code](entities/concept-memory-as-code.md) - Auto-generated entity page for Memory-as-Code (CONCEPT); appears in 1 wiki page(s).
+- [Memory Bank](entities/concept-memory-bank.md) - Auto-generated entity page for Memory Bank (CONCEPT); appears in 1 wiki page(s).
+- [memory tokens](entities/concept-memory-tokens.md) - Auto-generated entity page for memory tokens (CONCEPT); appears in 1 wiki page(s).
+- [MemoryOS](entities/concept-memoryos.md) - Auto-generated entity page for MemoryOS (CONCEPT); appears in 1 wiki page(s).
+- [Merge](entities/concept-merge.md) - Auto-generated entity page for Merge (CONCEPT); appears in 1 wiki page(s).
+- [Metrics](entities/concept-metrics.md) - Auto-generated entity page for Metrics (CONCEPT); appears in 1 wiki page(s).
+- [Micro-Worlds](entities/concept-micro-worlds.md) - Auto-generated entity page for Micro-Worlds (CONCEPT); appears in 1 wiki page(s).
+- [Middle Trough](entities/concept-middle-trough.md) - Auto-generated entity page for Middle Trough (CONCEPT); appears in 1 wiki page(s).
+- [MLOps Retraining Loop](entities/concept-mlops-retraining-loop.md) - Auto-generated entity page for MLOps Retraining Loop (CONCEPT); appears in 1 wiki page(s).
+- [MLOps](entities/concept-mlops.md) - Auto-generated entity page for MLOps (CONCEPT); appears in 1 wiki page(s).
+- [Model Context Protocol (MCP)](entities/concept-model-context-protocol-mcp.md) - Auto-generated entity page for Model Context Protocol (MCP) (CONCEPT); appears in 1 wiki page(s).
+- [Model Drift](entities/concept-model-drift.md) - Auto-generated entity page for Model Drift (CONCEPT); appears in 1 wiki page(s).
+- [Monte Carlo (MC) Dropout](entities/concept-monte-carlo-mc-dropout.md) - Auto-generated entity page for Monte Carlo (MC) Dropout (CONCEPT); appears in 1 wiki page(s).
+- [multi-agent systems](entities/concept-multi-agent-systems.md) - Auto-generated entity page for multi-agent systems (CONCEPT); appears in 2 wiki page(s).
+- [Multi-hop Reasoning](entities/concept-multi-hop-reasoning.md) - Auto-generated entity page for Multi-hop Reasoning (CONCEPT); appears in 1 wiki page(s).
+- [Multi-Hop Semantic Matching](entities/concept-multi-hop-semantic-matching.md) - Auto-generated entity page for Multi-Hop Semantic Matching (CONCEPT); appears in 1 wiki page(s).
+- [Myers-Briggs Type Indicator (MBTI)](entities/concept-myers-briggs-type-indicator-mbti.md) - Auto-generated entity page for Myers-Briggs Type Indicator (MBTI) (CONCEPT); appears in 1 wiki page(s).
+- [Needle In A Haystack (NIAH)](entities/concept-needle-in-a-haystack-niah.md) - Auto-generated entity page for Needle In A Haystack (NIAH) (CONCEPT); appears in 1 wiki page(s).
+- [network topologies](entities/concept-network-topologies.md) - Auto-generated entity page for network topologies (CONCEPT); appears in 1 wiki page(s).
+- [Normative Evaluation](entities/concept-normative-evaluation.md) - Auto-generated entity page for Normative Evaluation (CONCEPT); appears in 1 wiki page(s).
+- [OdysseyBench](entities/concept-odysseybench.md) - Auto-generated entity page for OdysseyBench (CONCEPT); appears in 1 wiki page(s).
+- [OpenAgentSafety](entities/concept-openagentsafety.md) - Auto-generated entity page for OpenAgentSafety (CONCEPT); appears in 1 wiki page(s).
+- [OpenTelemetry tracing](entities/concept-opentelemetry-tracing.md) - Auto-generated entity page for OpenTelemetry tracing (CONCEPT); appears in 1 wiki page(s).
+- [OpenTelemetry](entities/concept-opentelemetry.md) - Auto-generated entity page for OpenTelemetry (CONCEPT); appears in 1 wiki page(s).
+- [Optical Character Recognition (OCR)](entities/concept-optical-character-recognition-ocr.md) - Auto-generated entity page for Optical Character Recognition (OCR) (CONCEPT); appears in 1 wiki page(s).
+- [Orchestrator](entities/concept-orchestrator.md) - Auto-generated entity page for Orchestrator (CONCEPT); appears in 1 wiki page(s).
+- [Order-to-Cash process](entities/concept-order-to-cash-process.md) - Auto-generated entity page for Order-to-Cash process (CONCEPT); appears in 1 wiki page(s).
+- [ostcondition](entities/concept-ostcondition.md) - Auto-generated entity page for ostcondition (CONCEPT); appears in 1 wiki page(s).
+- [OT](entities/concept-ot.md) - Auto-generated entity page for OT (CONCEPT); appears in 1 wiki page(s).
+- [Parametric Memory](entities/concept-parametric-memory.md) - Auto-generated entity page for Parametric Memory (CONCEPT); appears in 1 wiki page(s).
+- [PERSONA Bench framework](entities/concept-persona-bench-framework.md) - Auto-generated entity page for PERSONA Bench framework (CONCEPT); appears in 1 wiki page(s).
+- [Persona](entities/concept-persona.md) - Auto-generated entity page for Persona (CONCEPT); appears in 1 wiki page(s).
+- [PersonaGym framework](entities/concept-personagym-framework.md) - Auto-generated entity page for PersonaGym framework (CONCEPT); appears in 1 wiki page(s).
+- [PersonaGym](entities/concept-personagym.md) - Auto-generated entity page for PersonaGym (CONCEPT); appears in 1 wiki page(s).
+- [PersonaMatrix](entities/concept-personamatrix.md) - Auto-generated entity page for PersonaMatrix (CONCEPT); appears in 1 wiki page(s).
+- [PersonaScore](entities/concept-personascore.md) - Auto-generated entity page for PersonaScore (CONCEPT); appears in 1 wiki page(s).
+- [Phoenix](entities/concept-phoenix.md) - Auto-generated entity page for Phoenix (CONCEPT); appears in 1 wiki page(s).
+- [Physical Assets](entities/concept-physical-assets.md) - Auto-generated entity page for Physical Assets (CONCEPT); appears in 1 wiki page(s).
+- [Plan Adherence](entities/concept-plan-adherence.md) - Auto-generated entity page for Plan Adherence (CONCEPT); appears in 1 wiki page(s).
+- [Plan Mode](entities/concept-plan-mode.md) - Auto-generated entity page for Plan Mode (CONCEPT); appears in 1 wiki page(s).
+- [Plan Quality](entities/concept-plan-quality.md) - Auto-generated entity page for Plan Quality (CONCEPT); appears in 1 wiki page(s).
+- [Plan vs Act modes](entities/concept-plan-vs-act-modes.md) - Auto-generated entity page for Plan vs Act modes (CONCEPT); appears in 1 wiki page(s).
+- [Plan vs. Act](entities/concept-plan-vs-act.md) - Auto-generated entity page for Plan vs. Act (CONCEPT); appears in 1 wiki page(s).
+- [POMDP](entities/concept-pomdp.md) - Auto-generated entity page for POMDP (CONCEPT); appears in 1 wiki page(s).
+- [Precision](entities/concept-precision.md) - Auto-generated entity page for Precision (CONCEPT); appears in 1 wiki page(s).
+- [Prescriptive Evaluation](entities/concept-prescriptive-evaluation.md) - Auto-generated entity page for Prescriptive Evaluation (CONCEPT); appears in 1 wiki page(s).
+- [Primacy Bias](entities/concept-primacy-bias.md) - Auto-generated entity page for Primacy Bias (CONCEPT); appears in 1 wiki page(s).
+- [Primacy/Recency Bias](entities/concept-primacy-recency-bias.md) - Auto-generated entity page for Primacy/Recency Bias (CONCEPT); appears in 1 wiki page(s).
+- [Principal Component Analysis (PCA)](entities/concept-principal-component-analysis-pca.md) - Auto-generated entity page for Principal Component Analysis (PCA) (CONCEPT); appears in 1 wiki page(s).
+- [Prize-Collecting Steiner Tree (PCST)](entities/concept-prize-collecting-steiner-tree-pcst.md) - Auto-generated entity page for Prize-Collecting Steiner Tree (PCST) (CONCEPT); appears in 1 wiki page(s).
+- [Procedural and Temporal Memory Graphs](entities/concept-procedural-and-temporal-memory-graphs.md) - Auto-generated entity page for Procedural and Temporal Memory Graphs (CONCEPT); appears in 1 wiki page(s).
+- [Procedural Content Generation (PCG)](entities/concept-procedural-content-generation-pcg.md) - Auto-generated entity page for Procedural Content Generation (PCG) (CONCEPT); appears in 1 wiki page(s).
+- [Process Digital Twin](entities/concept-process-digital-twin.md) - Auto-generated entity page for Process Digital Twin (CONCEPT); appears in 1 wiki page(s).
+- [productContext.md](entities/concept-productcontext-md.md) - Auto-generated entity page for productContext.md (CONCEPT); appears in 1 wiki page(s).
+- [progress.md](entities/concept-progress-md.md) - Auto-generated entity page for progress.md (CONCEPT); appears in 1 wiki page(s).
+- [projectbrief.md](entities/concept-projectbrief-md.md) - Auto-generated entity page for projectbrief.md (CONCEPT); appears in 1 wiki page(s).
+- [Prompt Engineering](entities/concept-prompt-engineering.md) - Auto-generated entity page for Prompt Engineering (CONCEPT); appears in 1 wiki page(s).
+- [Prompt Sandwiching](entities/concept-prompt-sandwiching.md) - Auto-generated entity page for Prompt Sandwiching (CONCEPT); appears in 1 wiki page(s).
+- [PyRIT](entities/concept-pyrit.md) - Auto-generated entity page for PyRIT (CONCEPT); appears in 1 wiki page(s).
+- [Q-Learning](entities/concept-q-learning.md) - Auto-generated entity page for Q-Learning (CONCEPT); appears in 1 wiki page(s).
+- [Question Answering (FinQA, TATQA)](entities/concept-question-answering-finqa-tatqa.md) - Auto-generated entity page for Question Answering (FinQA, TATQA) (CONCEPT); appears in 1 wiki page(s).
+- [RAG](entities/concept-rag.md) - Auto-generated entity page for RAG (CONCEPT); appears in 2 wiki page(s).
+- [Ragas](entities/concept-ragas.md) - Auto-generated entity page for Ragas (CONCEPT); appears in 1 wiki page(s).
+- [Recall](entities/concept-recall.md) - Auto-generated entity page for Recall (CONCEPT); appears in 1 wiki page(s).
+- [Recency Bias](entities/concept-recency-bias.md) - Auto-generated entity page for Recency Bias (CONCEPT); appears in 1 wiki page(s).
+- [Recoverability](entities/concept-recoverability.md) - Auto-generated entity page for Recoverability (CONCEPT); appears in 1 wiki page(s).
+- [Red Team](entities/concept-red-team.md) - Auto-generated entity page for Red Team (CONCEPT); appears in 1 wiki page(s).
+- [Reinforcement Learning](entities/concept-reinforcement-learning.md) - Auto-generated entity page for Reinforcement Learning (CONCEPT); appears in 2 wiki page(s).
+- [Reliability Engineering](entities/concept-reliability-engineering.md) - Auto-generated entity page for Reliability Engineering (CONCEPT); appears in 1 wiki page(s).
+- [Reliability Gap](entities/concept-reliability-gap.md) - Auto-generated entity page for Reliability Gap (CONCEPT); appears in 1 wiki page(s).
+- [Retrieval-Augmented Generation (RAG)](entities/concept-retrieval-augmented-generation-rag.md) - Auto-generated entity page for Retrieval-Augmented Generation (RAG) (CONCEPT); appears in 2 wiki page(s).
+- [Revert](entities/concept-revert.md) - Auto-generated entity page for Revert (CONCEPT); appears in 1 wiki page(s).
+- [Risk Management](entities/concept-risk-management.md) - Auto-generated entity page for Risk Management (CONCEPT); appears in 1 wiki page(s).
+- [RLHF](entities/concept-rlhf.md) - Auto-generated entity page for RLHF (CONCEPT); appears in 1 wiki page(s).
+- [RMSE](entities/concept-rmse.md) - Auto-generated entity page for RMSE (CONCEPT); appears in 1 wiki page(s).
+- [ROC-AUC](entities/concept-roc-auc.md) - Auto-generated entity page for ROC-AUC (CONCEPT); appears in 1 wiki page(s).
+- [ROS](entities/concept-ros.md) - Auto-generated entity page for ROS (CONCEPT); appears in 1 wiki page(s).
+- [ROT13 ciphers](entities/concept-rot13-ciphers.md) - Auto-generated entity page for ROT13 ciphers (CONCEPT); appears in 1 wiki page(s).
+- [ROUGE](entities/concept-rouge.md) - Auto-generated entity page for ROUGE (CONCEPT); appears in 1 wiki page(s).
+- [Runtime Verification Layer](entities/concept-runtime-verification-layer.md) - Auto-generated entity page for Runtime Verification Layer (CONCEPT); appears in 1 wiki page(s).
+- [Safety Invariants](entities/concept-safety-invariants.md) - Auto-generated entity page for Safety Invariants (CONCEPT); appears in 1 wiki page(s).
+- [SAGE-Agent](entities/concept-sage-agent.md) - Auto-generated entity page for SAGE-Agent (CONCEPT); appears in 1 wiki page(s).
+- [Saturation Hallucinations](entities/concept-saturation-hallucinations.md) - Auto-generated entity page for Saturation Hallucinations (CONCEPT); appears in 1 wiki page(s).
+- [Scratchpad](entities/concept-scratchpad.md) - Auto-generated entity page for Scratchpad (CONCEPT); appears in 1 wiki page(s).
+- [Semantic Entity Graph](entities/concept-semantic-entity-graph.md) - Auto-generated entity page for Semantic Entity Graph (CONCEPT); appears in 1 wiki page(s).
+- [Semantic entropy](entities/concept-semantic-entropy.md) - Auto-generated entity page for Semantic entropy (CONCEPT); appears in 1 wiki page(s).
+- [Sentiment Analysis Models](entities/concept-sentiment-analysis-models.md) - Auto-generated entity page for Sentiment Analysis Models (CONCEPT); appears in 1 wiki page(s).
+- [Sentiment Contagion](entities/concept-sentiment-contagion.md) - Auto-generated entity page for Sentiment Contagion (CONCEPT); appears in 1 wiki page(s).
+- [Shadow Mode](entities/concept-shadow-mode.md) - Auto-generated entity page for Shadow Mode (CONCEPT); appears in 1 wiki page(s).
+- [silent failure](entities/concept-silent-failure.md) - Auto-generated entity page for silent failure (CONCEPT); appears in 1 wiki page(s).
+- [Simulator Agent](entities/concept-simulator-agent.md) - Auto-generated entity page for Simulator Agent (CONCEPT); appears in 1 wiki page(s).
+- [Software Reliability Engineering](entities/concept-software-reliability-engineering.md) - Auto-generated entity page for Software Reliability Engineering (CONCEPT); appears in 1 wiki page(s).
+- [Solution Architect](entities/concept-solution-architect.md) - Auto-generated entity page for Solution Architect (CONCEPT); appears in 1 wiki page(s).
+- [SoMoSiMuBench](entities/concept-somosimubench.md) - Auto-generated entity page for SoMoSiMuBench (CONCEPT); appears in 1 wiki page(s).
+- [Spanish](entities/concept-spanish.md) - Auto-generated entity page for Spanish (CONCEPT); appears in 1 wiki page(s).
+- [SRICE](entities/concept-srice.md) - Auto-generated entity page for SRICE (CONCEPT); appears in 1 wiki page(s).
+- [Staging Environment](entities/concept-staging-environment.md) - Auto-generated entity page for Staging Environment (CONCEPT); appears in 1 wiki page(s).
+- [State Invariants](entities/concept-state-invariants.md) - Auto-generated entity page for State Invariants (CONCEPT); appears in 1 wiki page(s).
+- [State Machine](entities/concept-state-machine.md) - Auto-generated entity page for State Machine (CONCEPT); appears in 1 wiki page(s).
+- [State Space Explosion](entities/concept-state-space-explosion.md) - Auto-generated entity page for State Space Explosion (CONCEPT); appears in 1 wiki page(s).
+- [Stateful Mocks](entities/concept-stateful-mocks.md) - Auto-generated entity page for Stateful Mocks (CONCEPT); appears in 1 wiki page(s).
+- [Structured Uncertainty](entities/concept-structured-uncertainty.md) - Auto-generated entity page for Structured Uncertainty (CONCEPT); appears in 1 wiki page(s).
+- [Super Hallucination](entities/concept-super-hallucination.md) - Auto-generated entity page for Super Hallucination (CONCEPT); appears in 1 wiki page(s).
+- [Supply Chain Attacks](entities/concept-supply-chain-attacks.md) - Auto-generated entity page for Supply Chain Attacks (CONCEPT); appears in 1 wiki page(s).
+- [Synthetic Databases](entities/concept-synthetic-databases.md) - Auto-generated entity page for Synthetic Databases (CONCEPT); appears in 1 wiki page(s).
+- [System Agent](entities/concept-system-agent.md) - Auto-generated entity page for System Agent (CONCEPT); appears in 1 wiki page(s).
+- [systemPatterns.md](entities/concept-systempatterns-md.md) - Auto-generated entity page for systemPatterns.md (CONCEPT); appears in 1 wiki page(s).
+- [techContext.md](entities/concept-techcontext-md.md) - Auto-generated entity page for techContext.md (CONCEPT); appears in 1 wiki page(s).
+- [Temporal Layer](entities/concept-temporal-layer.md) - Auto-generated entity page for Temporal Layer (CONCEPT); appears in 1 wiki page(s).
+- [Test Case Validation Agents](entities/concept-test-case-validation-agents.md) - Auto-generated entity page for Test Case Validation Agents (CONCEPT); appears in 1 wiki page(s).
+- [Textual Analysis](entities/concept-textual-analysis.md) - Auto-generated entity page for Textual Analysis (CONCEPT); appears in 1 wiki page(s).
+- [Theoretical neuroscience](entities/concept-theoretical-neuroscience.md) - Auto-generated entity page for Theoretical neuroscience (CONCEPT); appears in 1 wiki page(s).
+- [Time Series Forecasting](entities/concept-time-series-forecasting.md) - Auto-generated entity page for Time Series Forecasting (CONCEPT); appears in 1 wiki page(s).
+- [Titans](entities/concept-titans.md) - Auto-generated entity page for Titans (CONCEPT); appears in 1 wiki page(s).
+- [TLA+](entities/concept-tla.md) - Auto-generated entity page for TLA+ (CONCEPT); appears in 1 wiki page(s).
+- [Token-Level Entropy](entities/concept-token-level-entropy.md) - Auto-generated entity page for Token-Level Entropy (CONCEPT); appears in 1 wiki page(s).
+- [Token Overflows](entities/concept-token-overflows.md) - Auto-generated entity page for Token Overflows (CONCEPT); appears in 1 wiki page(s).
+- [Tool Poisoning](entities/concept-tool-poisoning.md) - Auto-generated entity page for Tool Poisoning (CONCEPT); appears in 1 wiki page(s).
+- [Tool Selection Quality](entities/concept-tool-selection-quality.md) - Auto-generated entity page for Tool Selection Quality (CONCEPT); appears in 1 wiki page(s).
+- [ToolGate](entities/concept-toolgate.md) - Auto-generated entity page for ToolGate (CONCEPT); appears in 1 wiki page(s).
+- [trajectory](entities/concept-trajectory.md) - Auto-generated entity page for trajectory (CONCEPT); appears in 1 wiki page(s).
+- [Transformer-based LLMs](entities/concept-transformer-based-llms.md) - Auto-generated entity page for Transformer-based LLMs (CONCEPT); appears in 1 wiki page(s).
+- [Transformer](entities/concept-transformer.md) - Auto-generated entity page for Transformer (CONCEPT); appears in 1 wiki page(s).
+- [Transition Invariants](entities/concept-transition-invariants.md) - Auto-generated entity page for Transition Invariants (CONCEPT); appears in 1 wiki page(s).
+- [Trough of Performance Degradation](entities/concept-trough-of-performance-degradation.md) - Auto-generated entity page for Trough of Performance Degradation (CONCEPT); appears in 1 wiki page(s).
+- [U-shaped performance curve](entities/concept-u-shaped-performance-curve.md) - Auto-generated entity page for U-shaped performance curve (CONCEPT); appears in 1 wiki page(s).
+- [Ultra Context](entities/concept-ultra-context.md) - Auto-generated entity page for Ultra Context (CONCEPT); appears in 1 wiki page(s).
+- [Uncertainty Estimation Methods](entities/concept-uncertainty-estimation-methods.md) - Auto-generated entity page for Uncertainty Estimation Methods (CONCEPT); appears in 1 wiki page(s).
+- [Uncertainty Quantification](entities/concept-uncertainty-quantification.md) - Auto-generated entity page for Uncertainty Quantification (CONCEPT); appears in 1 wiki page(s).
+- [User Agent](entities/concept-user-agent.md) - Auto-generated entity page for User Agent (CONCEPT); appears in 1 wiki page(s).
+- [variational free energy](entities/concept-variational-free-energy.md) - Auto-generated entity page for variational free energy (CONCEPT); appears in 1 wiki page(s).
+- [Visual Counterfactuals](entities/concept-visual-counterfactuals.md) - Auto-generated entity page for Visual Counterfactuals (CONCEPT); appears in 1 wiki page(s).
+- [WallStreetBets (WSBS)](entities/concept-wallstreetbets-wsbs.md) - Auto-generated entity page for WallStreetBets (WSBS) (CONCEPT); appears in 1 wiki page(s).
+- [WESE](entities/concept-wese.md) - Auto-generated entity page for WESE (CONCEPT); appears in 1 wiki page(s).
+- [Z3](entities/concept-z3.md) - Auto-generated entity page for Z3 (CONCEPT); appears in 1 wiki page(s).
+- [Zep-powered knowledge graph](entities/concept-zep-powered-knowledge-graph.md) - Auto-generated entity page for Zep-powered knowledge graph (CONCEPT); appears in 1 wiki page(s).
+- [Zep](entities/concept-zep.md) - Auto-generated entity page for Zep (CONCEPT); appears in 1 wiki page(s).
+- [10th International Conference on Computational Social Science](entities/event-10th-international-conference-on-computational-social-science.md) - Auto-generated entity page for 10th International Conference on Computational Social Science (EVENT); appears in 1 wiki page(s).
+- [August to October 2025](entities/event-august-to-october-2025.md) - Auto-generated entity page for August to October 2025 (EVENT); appears in 1 wiki page(s).
+- [BlackLivesMatter](entities/event-blacklivesmatter.md) - Auto-generated entity page for BlackLivesMatter (EVENT); appears in 1 wiki page(s).
+- [ICML](entities/event-icml.md) - Auto-generated entity page for ICML (EVENT); appears in 1 wiki page(s).
+- [MeToo](entities/event-metoo.md) - Auto-generated entity page for MeToo (EVENT); appears in 1 wiki page(s).
+- [Roe v. Wade](entities/event-roe-v-wade.md) - Auto-generated entity page for Roe v. Wade (EVENT); appears in 1 wiki page(s).
+- [The 2024 Conference on Empirical Methods in Natural Language Processing](entities/event-the-2024-conference-on-empirical-methods-in-natural-language-processing.md) - Auto-generated entity page for The 2024 Conference on Empirical Methods in Natural Language Processing (EVENT); appears in 1 wiki page(s).
+- [Accenture](entities/org-accenture.md) - Auto-generated entity page for Accenture (ORG); appears in 1 wiki page(s).
+- [ACL Anthology](entities/org-acl-anthology.md) - Auto-generated entity page for ACL Anthology (ORG); appears in 1 wiki page(s).
+- [AgentOps.ai](entities/org-agentops-ai.md) - Auto-generated entity page for AgentOps.ai (ORG); appears in 1 wiki page(s).
+- [AgentOps](entities/org-agentops.md) - Auto-generated entity page for AgentOps (ORG); appears in 1 wiki page(s).
+- [AI x Product](entities/org-ai-x-product.md) - Auto-generated entity page for AI x Product (ORG); appears in 1 wiki page(s).
+- [Airflow](entities/org-airflow.md) - Auto-generated entity page for Airflow (ORG); appears in 1 wiki page(s).
+- [Akira AI](entities/org-akira-ai.md) - Auto-generated entity page for Akira AI (ORG); appears in 2 wiki page(s).
+- [Alan Turing Institute](entities/org-alan-turing-institute.md) - Auto-generated entity page for Alan Turing Institute (ORG); appears in 1 wiki page(s).
+- [Alibaba Qwen-plus](entities/org-alibaba-qwen-plus.md) - Auto-generated entity page for Alibaba Qwen-plus (ORG); appears in 1 wiki page(s).
+- [Analytics Vidhya](entities/org-analytics-vidhya.md) - Auto-generated entity page for Analytics Vidhya (ORG); appears in 1 wiki page(s).
+- [Anthropic](entities/org-anthropic.md) - Auto-generated entity page for Anthropic (ORG); appears in 2 wiki page(s).
+- [AnyLogic](entities/org-anylogic.md) - Auto-generated entity page for AnyLogic (ORG); appears in 2 wiki page(s).
+- [Arize AI](entities/org-arize-ai.md) - Auto-generated entity page for Arize AI (ORG); appears in 1 wiki page(s).
+- [Arize Phoenix](entities/org-arize-phoenix.md) - Auto-generated entity page for Arize Phoenix (ORG); appears in 2 wiki page(s).
+- [arXiv.org](entities/org-arxiv-org.md) - Auto-generated entity page for arXiv.org (ORG); appears in 1 wiki page(s).
+- [arXiv](entities/org-arxiv.md) - Auto-generated entity page for arXiv (ORG); appears in 1 wiki page(s).
+- [AutoMalTool](entities/org-automaltool.md) - Auto-generated entity page for AutoMalTool (ORG); appears in 1 wiki page(s).
+- [Braintrust](entities/org-braintrust.md) - Auto-generated entity page for Braintrust (ORG); appears in 1 wiki page(s).
+- [byterover.dev](entities/org-byterover-dev.md) - Auto-generated entity page for byterover.dev (ORG); appears in 1 wiki page(s).
+- [Cambridge University Press](entities/org-cambridge-university-press.md) - Auto-generated entity page for Cambridge University Press (ORG); appears in 1 wiki page(s).
+- [Camunda](entities/org-camunda.md) - Auto-generated entity page for Camunda (ORG); appears in 1 wiki page(s).
+- [Capgemini Invent Lab](entities/org-capgemini-invent-lab.md) - Auto-generated entity page for Capgemini Invent Lab (ORG); appears in 1 wiki page(s).
+- [Chroma Research](entities/org-chroma-research.md) - Auto-generated entity page for Chroma Research (ORG); appears in 1 wiki page(s).
+- [Claude-1.3](entities/org-claude-1-3.md) - Auto-generated entity page for Claude-1.3 (ORG); appears in 1 wiki page(s).
+- [Claude-3.5-haiku](entities/org-claude-3-5-haiku.md) - Auto-generated entity page for Claude-3.5-haiku (ORG); appears in 1 wiki page(s).
+- [Claude 3.5](entities/org-claude-3-5.md) - Auto-generated entity page for Claude 3.5 (ORG); appears in 1 wiki page(s).
+- [Claude](entities/org-claude.md) - Auto-generated entity page for Claude (ORG); appears in 1 wiki page(s).
+- [Cline](entities/org-cline.md) - Auto-generated entity page for Cline (ORG); appears in 1 wiki page(s).
+- [Confident AI](entities/org-confident-ai.md) - Auto-generated entity page for Confident AI (ORG); appears in 1 wiki page(s).
+- [Cursor](entities/org-cursor.md) - Auto-generated entity page for Cursor (ORG); appears in 1 wiki page(s).
+- [CybertLabs](entities/org-cybertlabs.md) - Auto-generated entity page for CybertLabs (ORG); appears in 1 wiki page(s).
+- [Databricks](entities/org-databricks.md) - Auto-generated entity page for Databricks (ORG); appears in 1 wiki page(s).
+- [DataRobot](entities/org-datarobot.md) - Auto-generated entity page for DataRobot (ORG); appears in 1 wiki page(s).
+- [Deepchecks](entities/org-deepchecks.md) - Auto-generated entity page for Deepchecks (ORG); appears in 1 wiki page(s).
+- [DEV Community](entities/org-dev-community.md) - Auto-generated entity page for DEV Community (ORG); appears in 2 wiki page(s).
+- [Devin](entities/org-devin.md) - Auto-generated entity page for Devin (ORG); appears in 1 wiki page(s).
+- [Emergent Mind](entities/org-emergent-mind.md) - Auto-generated entity page for Emergent Mind (ORG); appears in 1 wiki page(s).
+- [Energent.ai](entities/org-energent-ai.md) - Auto-generated entity page for Energent.ai (ORG); appears in 1 wiki page(s).
+- [Focal](entities/org-focal.md) - Auto-generated entity page for Focal (ORG); appears in 1 wiki page(s).
+- [Galileo](entities/org-galileo.md) - Auto-generated entity page for Galileo (ORG); appears in 1 wiki page(s).
+- [Gemini-2.0-flash](entities/org-gemini-2-0-flash.md) - Auto-generated entity page for Gemini-2.0-flash (ORG); appears in 1 wiki page(s).
+- [Giskard](entities/org-giskard.md) - Auto-generated entity page for Giskard (ORG); appears in 1 wiki page(s).
+- [GitHub Actions](entities/org-github-actions.md) - Auto-generated entity page for GitHub Actions (ORG); appears in 1 wiki page(s).
+- [GitHub](entities/org-github.md) - Auto-generated entity page for GitHub (ORG); appears in 1 wiki page(s).
+- [Google Search](entities/org-google-search.md) - Auto-generated entity page for Google Search (ORG); appears in 1 wiki page(s).
+- [Google](entities/org-google.md) - Auto-generated entity page for Google (ORG); appears in 1 wiki page(s).
+- [GPT-3.5-Turbo](entities/org-gpt-3-5-turbo.md) - Auto-generated entity page for GPT-3.5-Turbo (ORG); appears in 1 wiki page(s).
+- [GPT-4.1](entities/org-gpt-4-1.md) - Auto-generated entity page for GPT-4.1 (ORG); appears in 1 wiki page(s).
+- [GPT-4](entities/org-gpt-4.md) - Auto-generated entity page for GPT-4 (ORG); appears in 3 wiki page(s).
+- [Graphiti](entities/org-graphiti.md) - Auto-generated entity page for Graphiti (ORG); appears in 1 wiki page(s).
+- [HoneyHive](entities/org-honeyhive.md) - Auto-generated entity page for HoneyHive (ORG); appears in 1 wiki page(s).
+- [IBM](entities/org-ibm.md) - Auto-generated entity page for IBM (ORG); appears in 2 wiki page(s).
+- [InfoQ](entities/org-infoq.md) - Auto-generated entity page for InfoQ (ORG); appears in 1 wiki page(s).
+- [Insight Maker](entities/org-insight-maker.md) - Auto-generated entity page for Insight Maker (ORG); appears in 1 wiki page(s).
+- [JADE (Java Agent Development Framework)](entities/org-jade-java-agent-development-framework.md) - Auto-generated entity page for JADE (Java Agent Development Framework) (ORG); appears in 1 wiki page(s).
+- [Kubernetes](entities/org-kubernetes.md) - Auto-generated entity page for Kubernetes (ORG); appears in 1 wiki page(s).
+- [Lablab.ai](entities/org-lablab-ai.md) - Auto-generated entity page for Lablab.ai (ORG); appears in 1 wiki page(s).
+- [LangChain](entities/org-langchain.md) - Auto-generated entity page for LangChain (ORG); appears in 1 wiki page(s).
+- [Langfuse](entities/org-langfuse.md) - Auto-generated entity page for Langfuse (ORG); appears in 1 wiki page(s).
+- [LangSmith](entities/org-langsmith.md) - Auto-generated entity page for LangSmith (ORG); appears in 2 wiki page(s).
+- [LangWatch](entities/org-langwatch.md) - Auto-generated entity page for LangWatch (ORG); appears in 1 wiki page(s).
+- [Liner](entities/org-liner.md) - Auto-generated entity page for Liner (ORG); appears in 1 wiki page(s).
+- [LLaMA-3-8B](entities/org-llama-3-8b.md) - Auto-generated entity page for LLaMA-3-8B (ORG); appears in 1 wiki page(s).
+- [LocalStack](entities/org-localstack.md) - Auto-generated entity page for LocalStack (ORG); appears in 1 wiki page(s).
+- [Mabl](entities/org-mabl.md) - Auto-generated entity page for Mabl (ORG); appears in 1 wiki page(s).
+- [Maxim AI](entities/org-maxim-ai.md) - Auto-generated entity page for Maxim AI (ORG); appears in 2 wiki page(s).
+- [Medium](entities/org-medium.md) - Auto-generated entity page for Medium (ORG); appears in 2 wiki page(s).
+- [Mesa](entities/org-mesa.md) - Auto-generated entity page for Mesa (ORG); appears in 1 wiki page(s).
+- [Microsoft PyRIT](entities/org-microsoft-pyrit.md) - Auto-generated entity page for Microsoft PyRIT (ORG); appears in 1 wiki page(s).
+- [Microsoft Research](entities/org-microsoft-research.md) - Auto-generated entity page for Microsoft Research (ORG); appears in 1 wiki page(s).
+- [Microsoft](entities/org-microsoft.md) - Auto-generated entity page for Microsoft (ORG); appears in 2 wiki page(s).
+- [Milvus](entities/org-milvus.md) - Auto-generated entity page for Milvus (ORG); appears in 1 wiki page(s).
+- [MiroFish](entities/org-mirofish.md) - Auto-generated entity page for MiroFish (ORG); appears in 1 wiki page(s).
+- [Mistral AI](entities/org-mistral-ai.md) - Auto-generated entity page for Mistral AI (ORG); appears in 1 wiki page(s).
+- [MIT Press Direct](entities/org-mit-press-direct.md) - Auto-generated entity page for MIT Press Direct (ORG); appears in 1 wiki page(s).
+- [MLflow](entities/org-mlflow.md) - Auto-generated entity page for MLflow (ORG); appears in 1 wiki page(s).
+- [MuleSoft Vibes](entities/org-mulesoft-vibes.md) - Auto-generated entity page for MuleSoft Vibes (ORG); appears in 1 wiki page(s).
+- [MuleSoft](entities/org-mulesoft.md) - Auto-generated entity page for MuleSoft (ORG); appears in 1 wiki page(s).
+- [Neo4j](entities/org-neo4j.md) - Auto-generated entity page for Neo4j (ORG); appears in 1 wiki page(s).
+- [NetLogo](entities/org-netlogo.md) - Auto-generated entity page for NetLogo (ORG); appears in 1 wiki page(s).
+- [NIH](entities/org-nih.md) - Auto-generated entity page for NIH (ORG); appears in 1 wiki page(s).
+- [NVIDIA Technical Blog](entities/org-nvidia-technical-blog.md) - Auto-generated entity page for NVIDIA Technical Blog (ORG); appears in 1 wiki page(s).
+- [OA-Safety](entities/org-oa-safety.md) - Auto-generated entity page for OA-Safety (ORG); appears in 1 wiki page(s).
+- [OASIS simulation engine](entities/org-oasis-simulation-engine.md) - Auto-generated entity page for OASIS simulation engine (ORG); appears in 1 wiki page(s).
+- [Open FinLLM Leaderboard](entities/org-open-finllm-leaderboard.md) - Auto-generated entity page for Open FinLLM Leaderboard (ORG); appears in 1 wiki page(s).
+- [OpenAI SDK](entities/org-openai-sdk.md) - Auto-generated entity page for OpenAI SDK (ORG); appears in 1 wiki page(s).
+- [OpenAI](entities/org-openai.md) - Auto-generated entity page for OpenAI (ORG); appears in 1 wiki page(s).
+- [OpenDevin](entities/org-opendevin.md) - Auto-generated entity page for OpenDevin (ORG); appears in 1 wiki page(s).
+- [OpenHands](entities/org-openhands.md) - Auto-generated entity page for OpenHands (ORG); appears in 1 wiki page(s).
+- [OpenReview](entities/org-openreview.md) - Auto-generated entity page for OpenReview (ORG); appears in 1 wiki page(s).
+- [OpenTelemetry](entities/org-opentelemetry.md) - Auto-generated entity page for OpenTelemetry (ORG); appears in 1 wiki page(s).
+- [Patronus AI](entities/org-patronus-ai.md) - Auto-generated entity page for Patronus AI (ORG); appears in 1 wiki page(s).
+- [Phoenix Strategy Group](entities/org-phoenix-strategy-group.md) - Auto-generated entity page for Phoenix Strategy Group (ORG); appears in 1 wiki page(s).
+- [Pymdp](entities/org-pymdp.md) - Auto-generated entity page for Pymdp (ORG); appears in 1 wiki page(s).
+- [PyTorch](entities/org-pytorch.md) - Auto-generated entity page for PyTorch (ORG); appears in 1 wiki page(s).
+- [Ragas](entities/org-ragas.md) - Auto-generated entity page for Ragas (ORG); appears in 1 wiki page(s).
+- [Reddit](entities/org-reddit.md) - Auto-generated entity page for Reddit (ORG); appears in 1 wiki page(s).
+- [Redis](entities/org-redis.md) - Auto-generated entity page for Redis (ORG); appears in 1 wiki page(s).
+- [Repast](entities/org-repast.md) - Auto-generated entity page for Repast (ORG); appears in 1 wiki page(s).
+- [ResearchGate](entities/org-researchgate.md) - Auto-generated entity page for ResearchGate (ORG); appears in 2 wiki page(s).
+- [Salesforce Ben](entities/org-salesforce-ben.md) - Auto-generated entity page for Salesforce Ben (ORG); appears in 1 wiki page(s).
+- [SAP Signavio](entities/org-sap-signavio.md) - Auto-generated entity page for SAP Signavio (ORG); appears in 1 wiki page(s).
+- [SAP](entities/org-sap.md) - Auto-generated entity page for SAP (ORG); appears in 1 wiki page(s).
+- [Simio](entities/org-simio.md) - Auto-generated entity page for Simio (ORG); appears in 1 wiki page(s).
+- [Snowflake](entities/org-snowflake.md) - Auto-generated entity page for Snowflake (ORG); appears in 1 wiki page(s).
+- [SQLite](entities/org-sqlite.md) - Auto-generated entity page for SQLite (ORG); appears in 1 wiki page(s).
+- [Stanford](entities/org-stanford.md) - Auto-generated entity page for Stanford (ORG); appears in 1 wiki page(s).
+- [SUMO](entities/org-sumo.md) - Auto-generated entity page for SUMO (ORG); appears in 1 wiki page(s).
+- [Tata Steel](entities/org-tata-steel.md) - Auto-generated entity page for Tata Steel (ORG); appears in 1 wiki page(s).
+- [Tech for Humans](entities/org-tech-for-humans.md) - Auto-generated entity page for Tech for Humans (ORG); appears in 1 wiki page(s).
+- [Temporal](entities/org-temporal.md) - Auto-generated entity page for Temporal (ORG); appears in 1 wiki page(s).
+- [UltraContext](entities/org-ultracontext.md) - Auto-generated entity page for UltraContext (ORG); appears in 1 wiki page(s).
+- [Virtuoso QA](entities/org-virtuoso-qa.md) - Auto-generated entity page for Virtuoso QA (ORG); appears in 1 wiki page(s).
+- [VirtuosoQA](entities/org-virtuosoqa.md) - Auto-generated entity page for VirtuosoQA (ORG); appears in 1 wiki page(s).
+- [WireMock](entities/org-wiremock.md) - Auto-generated entity page for WireMock (ORG); appears in 1 wiki page(s).
+- [YouTube](entities/org-youtube.md) - Auto-generated entity page for YouTube (ORG); appears in 1 wiki page(s).
+- [Zep](entities/org-zep.md) - Auto-generated entity page for Zep (ORG); appears in 1 wiki page(s).
+- [ZeroEntropy](entities/org-zeroentropy.md) - Auto-generated entity page for ZeroEntropy (ORG); appears in 1 wiki page(s).
+- [Aayushmaan Hooda](entities/person-aayushmaan-hooda.md) - Auto-generated entity page for Aayushmaan Hooda (PERSON); appears in 1 wiki page(s).
+- [bijit211987](entities/person-bijit211987.md) - Auto-generated entity page for bijit211987 (PERSON); appears in 1 wiki page(s).
+- [Eshban Suleman](entities/person-eshban-suleman.md) - Auto-generated entity page for Eshban Suleman (PERSON); appears in 1 wiki page(s).
+- [Fabio](entities/person-fabio.md) - Auto-generated entity page for Fabio (PERSON); appears in 1 wiki page(s).
+- [Faustin Pulvéric](entities/person-faustin-pulv-ric.md) - Auto-generated entity page for Faustin Pulvéric (PERSON); appears in 1 wiki page(s).
+- [Hamel Husain](entities/person-hamel-husain.md) - Auto-generated entity page for Hamel Husain (PERSON); appears in 1 wiki page(s).
+- [jazir555](entities/person-jazir555.md) - Auto-generated entity page for jazir555 (PERSON); appears in 1 wiki page(s).
+- [Karol Zak](entities/person-karol-zak.md) - Auto-generated entity page for Karol Zak (PERSON); appears in 1 wiki page(s).
+- [kuldeep_paul](entities/person-kuldeep-paul.md) - Auto-generated entity page for kuldeep_paul (PERSON); appears in 1 wiki page(s).
+- [Leo Lin](entities/person-leo-lin.md) - Auto-generated entity page for Leo Lin (PERSON); appears in 1 wiki page(s).
+- [Liu et al.](entities/person-liu-et-al.md) - Auto-generated entity page for Liu et al. (PERSON); appears in 1 wiki page(s).
+- [Oluwatomisin](entities/person-oluwatomisin.md) - Auto-generated entity page for Oluwatomisin (PERSON); appears in 1 wiki page(s).
+- [Rainer Hegselmann](entities/person-rainer-hegselmann.md) - Auto-generated entity page for Rainer Hegselmann (PERSON); appears in 1 wiki page(s).
+- [T1nker-1220](entities/person-t1nker-1220.md) - Auto-generated entity page for T1nker-1220 (PERSON); appears in 1 wiki page(s).
+- [Ulrich Krause](entities/person-ulrich-krause.md) - Auto-generated entity page for Ulrich Krause (PERSON); appears in 1 wiki page(s).
+- [whynesspower](entities/person-whynesspower.md) - Auto-generated entity page for whynesspower (PERSON); appears in 1 wiki page(s).
+- [finance](entities/place-finance.md) - Auto-generated entity page for finance (PLACE); appears in 1 wiki page(s).
+- [France](entities/place-france.md) - Auto-generated entity page for France (PLACE); appears in 1 wiki page(s).
+- [healthcare](entities/place-healthcare.md) - Auto-generated entity page for healthcare (PLACE); appears in 1 wiki page(s).
+- [UK's airspace](entities/place-uk-s-airspace.md) - Auto-generated entity page for UK's airspace (PLACE); appears in 1 wiki page(s).
+- [WebArena-Lite](entities/place-webarena-lite.md) - Auto-generated entity page for WebArena-Lite (PLACE); appears in 1 wiki page(s).
 
 ## Review (staged)
 
-- [Agent Testing And Evaluation Research](review/agent-testing-and-evaluation-research.md) — conf 0.45
-- [Llm Context, Hallucinations, And Memory](review/llm-context-hallucinations-and-memory.md) — conf 0.45
+- [Agent Testing And Evaluation Research](review/agent-testing-and-evaluation-research.md) - The transition to autonomous, multi-agent systems necessitates specialized evaluation frameworks tailored to their architectural derivation, with two primary paradigms: social simulation and… (conf 0.45)
+- [Llm Context, Hallucinations, And Memory](review/llm-context-hallucinations-and-memory.md) - The field of Large Language Models (LLMs) faces a critical paradox: while context windows have expanded dramatically—from GPT-4’s 4,096 tokens to millions in models like Gemini 1.5 and Claude… (conf 0.45)

@@ -12,6 +12,11 @@ claims, and relations; writes confidence-scored pages; and keeps them honest
 over time through bi-temporal fact tracking, Ebbinghaus decay, and weekly
 self-lint runs.
 
+The wiki conforms to **[Google's Open Knowledge Format (OKF) v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)**
+— every page carries typed YAML frontmatter and bundle-relative markdown links,
+so the whole knowledge base can be exported as a portable OKF bundle (and
+external OKF bundles import directly as curated, high-trust pages).
+
 The schema is fully described in [`CLAUDE.md`](./CLAUDE.md) and the agent
 tool catalogue in [`AGENTS.md`](./AGENTS.md).
 
@@ -79,6 +84,9 @@ extraction-signal floor           ← rich text → confidence bump
 contextual preamble (Anthropic)   ← short doc context attached to chunks
    │
    ▼
+Doc2Query                         ← the questions this doc answers, indexed as <pid>#hq
+   │
+   ▼
 confidence gate
    │
    ├─ ≥ 0.60 → wiki/sources/<slug>.md
@@ -133,10 +141,12 @@ HyDE seed for dense retrieval     ← LLM hallucinates a hypothetical doc
    │
    ▼
 hybrid retrieval
-   ├─ BM25 over wiki/sources/
+   ├─ BM25 over wiki/sources/ (sub-chunks + #hq question units)
    ├─ dense over Chroma (or numpy fallback)
    ├─ RRF fuse
-   ├─ FlashRank cross-encoder rerank
+   ├─ FlashRank cross-encoder rerank (graceful passthrough if not installed)
+   ├─ small-to-big: rerank the MATCHED sub-chunks ± neighbours, not page[:4000]
+   ├─ machine-page down-weight ×0.85 (anti-feedback-loop for save-backs)
    ├─ graph 2-hop expansion via entity links
    └─ MMR diversification
    │
@@ -153,6 +163,9 @@ adaptive model routing            ← quantitative Q → VibeThinker reasons, qw
 multimodal expansion              ← surface tables/figures linked to retrieved entities
    │
    ▼
+lost-in-the-middle reorder        ← ends-load context: best page first, runner-up last
+   │
+   ▼
 synthesis
    ├─ numbered citations
    ├─ [Page]^conf markers per claim
@@ -161,6 +174,9 @@ synthesis
    ▼
 grounding check + CRAG ceiling    ← detect ungrounded statements
    │
+   ▼
+NLI-lite claim verification       ← ONE batched judge call per answer; unsupported
+   │                                claims drag per-claim + overall confidence down
    ▼
 reflection critique → optional refinement
    │
@@ -195,6 +211,67 @@ isn't installed.
 See [`CLAUDE.md`](./CLAUDE.md) for the schema details and
 [`docs/design/multimodal-graph.md`](./docs/design/multimodal-graph.md) for the
 multimodal-graph rollout.
+
+---
+
+## Best-of-best RAG package (v5)
+
+Six further techniques, each flag-gated and on by default:
+
+| Technique | What it does | Flag (default) |
+|---|---|---|
+| **Small-to-big retrieval** | Reranks/synthesises the 1500-char sub-chunks that actually matched (± neighbours), re-derived exactly as indexed — instead of the first 4000 chars of the page. Fixes relevant content beyond the prefix never reaching the LLM. | `QUERY_CHUNK_CONTEXT` (on) |
+| **Doc2Query** (Nogueira & Lin) | At ingest, generates the questions each document answers and indexes them as `<pid>#hq`, so question-phrased queries match declarative text. | `INGEST_DOC2QUERY` (on) |
+| **Lost-in-the-middle reorder** (Liu et al. 2023) | Ends-loads the synthesis context — best page first, runner-up last — to counter positional attention decay. | `QUERY_LITM_REORDER` (on) |
+| **NLI-lite claim verification** | One batched judge call checks every cited claim sentence against its cited snippet; unsupported claims get ×0.35 confidence. Catches "right page, wrong claim". | `QUERY_CLAIM_VERIFY` (on) |
+| **Machine-page down-weight** | Synthesis/promoted/crystallized pages score ×0.85 at rerank so save-backs never outrank the primary sources they came from. | `RETRIEVAL_SYNTH_DOWNWEIGHT` (0.85) |
+| **RAPTOR-lite topics** (Sarthi et al. 2024) | Weekly clustering of live pages into `topic-*.md` overview pages, so corpus-level questions ("main themes across my documents?") have a retrievable answer. | `JOB_BUILD_TOPICS_ENABLED` (on) |
+
+Pages ingested before v5 need a one-off backfill for the `#hq` units and topics:
+
+```bash
+python scripts/backfill_v5.py                  # uses configured models
+python scripts/backfill_v5.py --summary-model llama3.2:latest --reason-model llama3.2:latest
+```
+
+---
+
+## Evaluation harness
+
+With ~16 stacked techniques, measure what actually pays for its latency on
+**your** corpus:
+
+```bash
+python scripts/gen_golden.py --n 15            # LLM-generate golden Q/page pairs → eval/golden.jsonl
+python scripts/run_eval.py                     # retrieval baseline: recall@k, MRR, hit-rate, latency
+python scripts/run_eval.py --ablate            # + one-flag-off variants (chunk-context, MMR, down-weight, graph)
+python scripts/run_eval.py --answers           # + full answer eval: keyword coverage, groundedness, confidence
+```
+
+Retrieval eval needs only the embedding model (cheap; run per ablation).
+Answer eval runs the full pipeline per question. Results land in
+`eval/results-<label>.json`. Hand-edit `eval/golden.jsonl` freely — an
+LLM-generated golden set inherits its generator's blind spots.
+
+---
+
+## OKF bundles — import & export
+
+The wiki *is* an OKF bundle. Two scripts make that portable:
+
+```bash
+# Export the stable tiers (sources/entities/procedures + index.md + log.md)
+# as a standalone, validated OKF bundle — share as a git repo or archive:
+python scripts/export_okf.py dist/my-wiki-bundle
+
+# Import someone else's OKF bundle as curated pages — no LLM pipeline, pages
+# copy 1:1 with provenance stamped, links become RELATES_TO graph edges:
+python scripts/import_okf.py path/to/their-bundle
+python scripts/import_okf.py path/to/their-bundle --validate-only   # conformance check
+
+# Re-stamp pages written before OKF conformance (idempotent):
+python scripts/migrate_okf.py
+```
 
 ---
 
@@ -237,6 +314,8 @@ var). Manual one-off runs available via `POST /admin/run/{job_name}`.
 | daily 04:00      | `promote_episodic`   | `JOB_PROMOTE_EPISODIC_ENABLED`     |
 | weekly Sun 05:00 | `lint_autofix`       | `JOB_LINT_AUTOFIX_ENABLED`         |
 | weekly Sun 06:00 | `detect_procedures`  | `JOB_DETECT_PROCEDURES_ENABLED`    |
+| weekly Sun 07:00 | `page_compaction`    | `JOB_PAGE_COMPACTION_ENABLED`      |
+| weekly Sun 07:30 | `build_topics`       | `JOB_BUILD_TOPICS_ENABLED`         |
 
 ---
 
@@ -244,8 +323,7 @@ var). Manual one-off runs available via `POST /admin/run/{job_name}`.
 
 | Role                         | Model                       | Notes                                  |
 |------------------------------|-----------------------------|----------------------------------------|
-| Role                         | Model                       | Notes                                  |
-| Summarise, extract           | `gemma3:e4b`                | Fast, strong instruction-following     |
+| Summarise, extract           | `gemma4:e4b`                | Fast, strong instruction-following     |
 | Reason, route, lint, claims  | `qwen3:14b`                 | Deep reasoning, thinking mode          |
 | Quantitative specialist      | `vibethinker:3b`            | AIME-class maths/STEM; routed to adaptively |
 | Embeddings                   | `nomic-embed-text:latest`   | 274 MB, MTEB-strong                    |
@@ -298,7 +376,7 @@ cp .env.example .env  # set OLLAMA_HOST etc.
 
 # Pull required models
 ollama pull qwen3:14b
-ollama pull gemma3:e4b
+ollama pull gemma4:e4b
 ollama pull nomic-embed-text
 
 # Run the API
@@ -333,8 +411,9 @@ curl -X POST http://localhost:8000/admin/run/promote_episodic
 ```
 src/
 ├── api.py                 FastAPI endpoints
-├── ingest.py              Multi-format ingest pipeline
+├── ingest.py              Multi-format ingest pipeline (+ Doc2Query)
 ├── query.py               Hybrid retrieval + reflective synthesis + save-back
+├── eval_harness.py        Golden-set evaluation: recall@k/MRR + answer quality + ablations
 ├── lint.py                Health check + auto-fix
 ├── graph.py               Bi-temporal knowledge graph (SQLite-backed)
 ├── llm.py                 Async Ollama client (cached embeddings)
@@ -342,12 +421,24 @@ src/
 ├── logging_config.py      JSON logs + audit channel
 ├── scheduler.py           APScheduler + JOB_REGISTRY
 ├── mcp_server.py          Agent-facing MCP wrapper
-├── search/                BM25, dense, RRF, FlashRank, MMR, multi-query, intent
-├── synth/                 Answer blocks, per-claim confidence, reflect, followups
+├── search/                BM25, dense, RRF, FlashRank, MMR, multi-query, intent,
+│                          chunks (small-to-big reconstruction)
+├── synth/                 Answer blocks, per-claim confidence, claim verify,
+│                          reflect, followups
 ├── loaders/               Multi-format (PDF, DOCX, PPTX, XLSX, HTML, MD, TXT)
-└── wiki/                  Page store, episodic, promote, procedures,
+│                          + OKF bundle loader
+└── wiki/                  Page store (OKF stamping), episodic, promote, procedures,
                            reconciler, lifecycle, contradiction_resolver,
-                           entity_pages, index_md, log_md
+                           entity_pages, topics (RAPTOR-lite), index_md, log_md,
+                           okf_export
+
+scripts/
+├── migrate_okf.py         Re-stamp pre-OKF pages (idempotent)
+├── backfill_v5.py         Backfill #hq units + topic pages for older ingests
+├── gen_golden.py          Generate eval/golden.jsonl from the live wiki
+├── run_eval.py            Run retrieval/answer eval (+ --ablate variants)
+├── import_okf.py          Import an external OKF bundle (curated, no LLM)
+└── export_okf.py          Export the wiki as a standalone OKF bundle
 
 wiki/
 ├── index.md               Auto-regenerated table of contents
@@ -376,16 +467,26 @@ logs/
 
 ## Page frontmatter convention
 
+Conforms to OKF v0.1: `type` (OKF's one required field), `description`,
+`resource`, and `timestamp` are stamped centrally by `write_page()` on every
+write, so all writers conform automatically.
+
 ```yaml
 ---
 title: "Page Title"
-kind: source | entity | synthesis | promoted | crystallized | procedure
+kind: source | entity | synthesis | promoted | crystallized | procedure | topic
+type: "Source Document" | "Person|Organization|Concept|Place|Event" | "Synthesis" | "Topic Overview"
+description: "One-sentence summary (first prose sentence of body if not supplied)"
+resource: "wiki/raw/file.pdf"          # OKF URI of the underlying asset
+timestamp: "2026-07-15T16:51:36+00:00" # ISO 8601 last modification, auto-stamped
 source: "wiki/raw/file.pdf" | "query-save-back" | "episodic-promotion"
 ingested: 2026-05-01
 confidence: 0.87
 confidence_reason: "..."
+domain: general | math | science | economics | engineering
 tags: [concept, person, org]
 entity_refs: ["Entity A", "Entity B"]
+hypothetical_questions: ["What does …?"]  # Doc2Query, indexed as <pid>#hq
 context_preamble: "..."     # Anthropic Contextual Retrieval
 has_tables: true
 has_images: false

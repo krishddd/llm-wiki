@@ -72,6 +72,32 @@ spaces stay consistent). `hybrid_search` calls `route_search()` when present; a 
 Enabling requires `ollama pull bge-m3` and re-ingesting (or rebuilding) to populate
 the STEM collection.
 
+### Best-of-best RAG package (v5)
+
+Five techniques layered onto the existing pipeline (each flag-gated, on by default):
+
+| Technique | Where | Flag |
+|---|---|---|
+| **Small-to-big retrieval** — rerank/synthesise the matched 1500-char sub-chunks (±neighbours) instead of `page[:4000]`; `src/search/chunks.py` re-derives the exact index-time chunks | `hybrid.py` | `QUERY_CHUNK_CONTEXT` |
+| **Doc2Query** (Nogueira & Lin) — index the questions each doc answers as `<pid>#hq` so question-phrased queries match declarative text | `ingest.py` | `INGEST_DOC2QUERY` |
+| **Lost-in-the-middle reorder** (Liu et al. 2023) — ends-load synthesis context: best page first, runner-up last | `query.py` | `QUERY_LITM_REORDER` |
+| **NLI-lite claim verification** — one batched gemma call judges each cited claim against its cited snippet; unsupported ×0.35 confidence | `synth/verify.py` | `QUERY_CLAIM_VERIFY` |
+| **Machine-page down-weight** — synthesis/promoted/crystallized pages score ×0.85 at rerank so save-backs never outrank primary sources (anti-feedback-loop) | `hybrid.py` | `RETRIEVAL_SYNTH_DOWNWEIGHT` |
+| **RAPTOR-lite topics** (Sarthi et al. 2024 / GraphRAG communities) — weekly greedy-cosine clustering of live pages → `topic-*.md` overview pages (kind `topic`) answering corpus-level questions | `wiki/topics.py` | `JOB_BUILD_TOPICS_ENABLED`, `TOPICS_MIN_CLUSTER`, `TOPICS_MAX`, `TOPICS_SIM_THRESHOLD` |
+
+Supporting tooling:
+- `scripts/backfill_v5.py` — one-off `#hq` + topic backfill for pre-v5 pages
+  (`--summary-model`/`--reason-model` override when gemma4/qwen3 aren't pulled).
+- **Eval harness** (`src/eval_harness.py`): `scripts/gen_golden.py` builds
+  `eval/golden.jsonl` from the live wiki; `scripts/run_eval.py [--ablate] [--answers]`
+  measures recall@k / MRR / latency per one-flag-off variant and answer quality.
+  Run it before adding or removing retrieval techniques.
+- **OKF bundles**: `scripts/export_okf.py <out>` ships sources/entities/procedures as
+  a validated standalone bundle; `scripts/import_okf.py <bundle>` imports external
+  bundles as curated pages (no LLM pass; links → RELATES_TO edges);
+  `src/loaders/okf_loader.py::validate_bundle` checks conformance.
+- `rerank()` degrades to RRF-order passthrough when flashrank isn't installed.
+
 ---
 
 ## Three-layer architecture
@@ -156,10 +182,28 @@ LLM_Wiki/
 
 ## Page conventions (frontmatter)
 
+The wiki conforms to **Google's Open Knowledge Format (OKF) v0.1**
+([spec](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)):
+every concept page carries `type` (OKF's one required field), plus the recommended
+`description`, `resource`, `tags`, and `timestamp`. `write_page()` stamps `type`
+(mapped from `kind` via `OKF_TYPE_BY_KIND`), `description` (first prose sentence of
+the body when absent) and `timestamp` (ISO 8601 last-modification) centrally, so every
+writer conforms automatically. `index.md` / `log.md` are OKF reserved filenames —
+never concept pages (`PageStore.iter_pages` skips them). The root `index.md` declares
+`okf_version: "0.1"` and lists pages as `- [Title](path) - description`. `log.md` uses
+date-grouped, newest-first entries with bold action keywords. Body cross-links are
+bundle-relative markdown links (`[Title](/sources/foo.md)`) — NOT Obsidian wikilinks —
+so OKF consumers can treat them as graph edges. `scripts/migrate_okf.py` re-stamps
+pre-OKF pages (idempotent).
+
 ```yaml
 ---
 title: "Page Title"
 kind: source | entity | synthesis | promoted | crystallized | procedure
+type: "Source Document" | "Person|Organization|Concept|Place|Event" | "Synthesis" | ...   # OKF required
+description: "One-sentence summary (first prose sentence of body if not supplied)"       # OKF recommended
+resource: "wiki/raw/file.pdf"        # OKF URI of the underlying asset (mirrors source)
+timestamp: "2026-07-15T16:51:36+00:00"  # OKF last-modification; auto-stamped on write
 source: "wiki/raw/file.pdf" | "query-save-back" | "episodic-promotion" | "session-crystallize"
 ingested: 2026-05-01
 confidence: 0.87
@@ -200,6 +244,7 @@ load_elements (multi-format)
   → qwen merge (3-tier fallback) + score confidence
   → extraction-signal floor (rich → bumps confidence)
   → contextual preamble (Anthropic) for embedding text
+  → Doc2Query: gemma generates the questions the doc answers → indexed as <pid>#hq   [v5]
   → write to sources/ or review/
   → upsert entities + relations
   → extract S-P-O claims (qwen) → add_fact()         [v2]
@@ -227,14 +272,21 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
   → multi-query paraphrase (RAG-Fusion)
   → HyDE seed for dense
   → hybrid retrieval (BM25 + dense → RRF → FlashRank → graph 2-hop → MMR)
+       → small-to-big: rerank/synthesise the MATCHED sub-chunks (±neighbours),  [v5]
+         not page[:4000] — src/search/chunks.py re-derives index-time chunks
+       → machine-page down-weight (synthesis/promoted/crystallized ×0.85)      [v5]
   → mark_accessed() on retrieved pages              [v2 — Phase B3]
   → CRAG relevance filter (drop off-topic)
   → adaptive model routing: if quantitative (maths/econ/science/eng),     [VibeThinker]
        VibeThinker reasons step-by-step → qwen formats + cites the result
   → multimodal expansion: surface media nodes linked to retrieved        [GRAPH_MULTIMODAL_NODES]
        entities (tables/figures/code) into context + related_media
+  → lost-in-the-middle reorder: ends-load context (best first, runner-up last)  [v5]
   → synthesis (numbered citations, [Page]^conf markers, blocks)
   → grounding check + CRAG ceiling
+  → NLI-lite claim verification: ONE batched gemma call judges each cited claim  [v5]
+       against its cited snippet (supported/partial/unsupported) → recalibrates
+       per-claim + overall confidence (catches "right page, wrong claim")
   → reflection critique → optional refinement
   → record_query_pattern() in procedural store      [v2 — Phase C4]
   → save-back if conf ≥ 0.80 ∧ ≥ 2 cits
@@ -262,6 +314,7 @@ qwen scans first 30 pages
 | daily 04:00 | `promote_episodic` | `JOB_PROMOTE_EPISODIC_ENABLED` |
 | weekly Sun 05:00 | `lint_autofix` | `JOB_LINT_AUTOFIX_ENABLED` |
 | weekly Sun 06:00 | `detect_procedures` | `JOB_DETECT_PROCEDURES_ENABLED` |
+| weekly Sun 07:30 | `build_topics` (RAPTOR-lite topic overviews) | `JOB_BUILD_TOPICS_ENABLED` |
 
 Manual: `POST /admin/run/{job_name}` runs any registered job once.
 

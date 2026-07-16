@@ -52,3 +52,6 @@ service-account*.json
 # Large docs
 *.docx
 *.pdf
+
+# eval harness scratch indexes
+eval/.work/

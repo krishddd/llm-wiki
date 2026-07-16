@@ -50,7 +50,9 @@ def append_episode(
 
     if not path.exists():
         path.write_text(
-            f"---\nkind: episodic\ndate: {today}\n---\n\n# Episodic — {today}\n\n",
+            f"---\nkind: episodic\ntype: Episodic Log\n"
+            f"description: Append-only episodic memory log for {today}.\n"
+            f"date: {today}\n---\n\n# Episodic — {today}\n\n",
             encoding="utf-8",
         )
     cid_line = f"correlation_id: `{correlation_id}`\n" if correlation_id else ""

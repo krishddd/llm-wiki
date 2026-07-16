@@ -20,7 +20,6 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date
-from pathlib import Path
 from typing import Any
 
 from .config import Settings, get_settings
@@ -228,6 +227,16 @@ def _slug(s: str) -> str:
     return s[:80] or "synthesis"
 
 
+def _litm_reorder(items: list) -> list:
+    """Lost-in-the-middle mitigation (Liu et al. 2023): LLMs attend most to the
+    start and end of the context. Given items ranked best→worst, return them
+    ends-loaded — best first, second-best last, weakest in the middle."""
+    front, back = [], []
+    for i, it in enumerate(items):
+        (front if i % 2 == 0 else back).append(it)
+    return front + back[::-1]
+
+
 def _check_grounded(answer: str, citations: list[Citation]) -> tuple[bool, int]:
     """Every [token] in answer should match a cited page title. Returns (grounded_flag, ungrounded_count)."""
     if not citations:
@@ -303,6 +312,8 @@ class QueryEngine:
             graph_expand=graph_expand,
             hyde_text=hyde_text,
             use_mmr=use_mmr,
+            use_chunk_context=getattr(self.s, "query_chunk_context", True),
+            synth_downweight=getattr(self.s, "retrieval_synth_downweight", 0.85),
         )
 
     # ── Save-back ──
@@ -328,13 +339,15 @@ class QueryEngine:
             body_lines.append("## Sources")
             body_lines.append("")
             for c in citations:
-                stem = Path(c.page).stem
-                body_lines.append(f"- [[{stem}|{c.title}]]")
+                # OKF bundle-relative markdown link — c.page is already wiki-relative.
+                rel = c.page.replace("\\", "/")
+                body_lines.append(f"- [{c.title}](/{rel})")
             body = "\n".join(body_lines)
 
             frontmatter = {
                 "title": question.strip()[:120],
                 "kind": "synthesis",
+                "description": str(result_data.get("summary", "")).strip()[:200],
                 "source": "query-save-back",
                 "confidence": round(float(result_data.get("confidence", 0.0)), 2),
                 "entity_refs": list(result_data.get("entities") or [])[:30],
@@ -531,7 +544,11 @@ class QueryEngine:
             )
 
         # 4) Synthesis with strict JSON schema + retry.
-        ctx, cits = _build_context(retrieved, query=question, full_page_mode=full_page_mode)
+        # Lost-in-the-middle: ends-load the context (best page first, runner-up last).
+        retrieved_ctx = retrieved
+        if getattr(self.s, "query_litm_reorder", True) and len(retrieved) > 3:
+            retrieved_ctx = _litm_reorder(retrieved)
+        ctx, cits = _build_context(retrieved_ctx, query=question, full_page_mode=full_page_mode)
 
         # GraphRAG: Compile structured "Canonical Truth" table of active bi-temporal facts
         active_facts = []
@@ -717,8 +734,27 @@ class QueryEngine:
         # 7) NotebookLM-style post-processing.
         # 7a) Parse per-claim confidence markers `[Page]^0.NN` BEFORE numbering.
         per_claim: list[Claim] = []
+        per_claim_display: list[dict] = []
         if self.s.query_per_claim_confidence:
             per_claim = parse_claims(answer_text)
+            # 7a-bis) NLI-lite claim verification: one batched judge call checks each
+            # claim sentence against its cited snippet and recalibrates the per-claim
+            # confidences (catches "right page, wrong claim" citations).
+            if per_claim and getattr(self.s, "query_claim_verify", True):
+                try:
+                    from .synth.verify import apply_verdicts, verify_claims
+                    verdicts = await verify_claims(
+                        self.c, answer=answer_text, claims=per_claim, citations=cits,
+                    )
+                    per_claim_display = apply_verdicts(per_claim, verdicts)
+                    n_unsupported = sum(1 for v in verdicts if v == "unsupported")
+                    if n_unsupported:
+                        log.info(
+                            "claim verification flagged unsupported claims",
+                            extra={"metadata": {"unsupported": n_unsupported, "total": len(per_claim)}},
+                        )
+                except Exception as e:
+                    log.debug("claim verify failed", extra={"metadata": {"error": str(e)[:160]}})
             if per_claim:
                 # Calibrate the overall confidence with per-claim aggregate.
                 claim_overall = aggregate_confidence(per_claim, ceiling=crag_ceiling)
@@ -779,7 +815,7 @@ class QueryEngine:
             reasoner=reasoner_used,
             quality_score=round(critique_score, 3),
             quality_issues=critique_issues,
-            per_claim_confidences=[
+            per_claim_confidences=per_claim_display or [
                 {"citation": c.citation_token, "confidence": round(c.confidence, 3)}
                 for c in per_claim
             ],

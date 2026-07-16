@@ -1,9 +1,17 @@
-"""Wiki page read/write with YAML frontmatter, confidence-gated storage, and PageStore used by retrieval."""
+"""Wiki page read/write with YAML frontmatter, confidence-gated storage, and PageStore used by retrieval.
+
+OKF conformance (Open Knowledge Format v0.1, github.com/GoogleCloudPlatform/knowledge-catalog):
+every non-reserved `.md` page carries a `type` frontmatter field (the one field OKF
+requires) plus the recommended `timestamp` (ISO 8601, last modification). Both are
+stamped centrally in `write_page` so every writer conforms without repeating itself.
+`index.md` and `log.md` are OKF reserved filenames — never treated as concept pages.
+"""
 from __future__ import annotations
 
 import logging
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -14,6 +22,48 @@ from ..logging_config import audit
 log = logging.getLogger(__name__)
 
 _FM_RE = re.compile(r"^---\n(.*?)\n---\n?(.*)$", re.DOTALL)
+
+# OKF reserved filenames — directory listing / update history, not concept documents.
+RESERVED_FILENAMES = {"index.md", "log.md"}
+
+# Internal page `kind` → OKF `type` (short human string; OKF types are not registered
+# centrally, consumers must tolerate unknown values).
+OKF_TYPE_BY_KIND = {
+    "source": "Source Document",
+    "synthesis": "Synthesis",
+    "promoted": "Promoted Synthesis",
+    "crystallized": "Session Digest",
+    "procedure": "Procedure",
+    "entity": "Entity",
+    "episodic": "Episodic Log",
+    "topic": "Topic Overview",
+}
+
+
+def okf_type_for(kind: str) -> str:
+    return OKF_TYPE_BY_KIND.get((kind or "").strip().lower(), "Document")
+
+
+def derive_description(body: str, max_chars: int = 200) -> str:
+    """First prose sentence of `body`, markdown-stripped — OKF's one-line `description`."""
+    for line in (body or "").splitlines():
+        t = line.strip()
+        if not t or t.startswith(("#", "|", "```", "---", "![", "> ")):
+            continue
+        # strip common inline markdown
+        t = re.sub(r"\[\[([^\]|]+)\|([^\]]+)\]\]", r"\2", t)      # [[page|label]] → label
+        t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)             # [label](url) → label
+        t = re.sub(r"[*_`]{1,3}", "", t)
+        t = re.sub(r"^\s*[-*+]\s+", "", t).strip()
+        if len(t) < 20:
+            continue
+        m = re.match(r"(.+?[.!?])(\s|$)", t)
+        sent = (m.group(1) if m else t).strip()
+        if len(sent) > max_chars:
+            # truncate at a word boundary
+            sent = sent[:max_chars].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+        return sent
+    return ""
 
 
 def _slug(name: str) -> str:
@@ -46,6 +96,15 @@ def read_page(path: Path) -> Page:
 
 
 def write_page(page: Page) -> None:
+    # OKF stamping — skip reserved filenames (index.md / log.md carry no frontmatter).
+    if page.frontmatter and page.path.name.lower() not in RESERVED_FILENAMES:
+        if not page.frontmatter.get("type"):
+            page.frontmatter["type"] = okf_type_for(str(page.frontmatter.get("kind", "")))
+        if not page.frontmatter.get("description"):
+            desc = derive_description(page.body)
+            if desc:
+                page.frontmatter["description"] = desc
+        page.frontmatter["timestamp"] = datetime.now(UTC).isoformat(timespec="seconds")
     page.path.parent.mkdir(parents=True, exist_ok=True)
     page.path.write_text(page.render(), encoding="utf-8")
 
@@ -94,4 +153,6 @@ class PageStore:
             if not d.exists():
                 continue
             for p in sorted(d.glob("*.md")):
+                if p.name.lower() in RESERVED_FILENAMES:
+                    continue  # OKF reserved files are not concept pages
                 yield page_id_from_path(p, self.wiki_dir), read_page(p)

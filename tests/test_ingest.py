@@ -22,6 +22,17 @@ async def test_ingest_small_md(tmp_settings, fake_ollama, tmp_path):
     assert result.entities_added >= 1
     assert result.page_path
     assert (tmp_settings.wiki_dir / "sources").glob("*.md")
+    # OKF conformance: source pages carry kind/type/description/resource/timestamp.
+    from src.wiki.pages import read_page
+    fm = read_page(next((tmp_settings.wiki_dir / "sources").glob("*.md"))).frontmatter
+    assert fm["kind"] == "source"
+    assert fm["type"] == "Source Document"
+    assert fm["resource"] == fm["source"]
+    assert fm["timestamp"]
+    assert fm["description"]
+    # Doc2Query: hypothetical questions persisted + indexed as their own unit.
+    assert fm["hypothetical_questions"]
+    assert any(k.endswith("#hq") for k in bm25._docs)
     # throttling: FakeOllama tracks simultaneous calls; with semaphore=2 we must never exceed it.
     assert fake_ollama.max_concurrent_seen <= tmp_settings.max_concurrent_llm_req
 

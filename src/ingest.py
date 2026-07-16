@@ -21,12 +21,20 @@ from .loaders import elements_to_markdown, layout_aware_chunks, load_elements, l
 from .loaders.elements import DocElement
 from .logging_config import audit
 from .search.bm25_index import BM25Index
+from .search.chunks import SUB_CHUNK_OVERLAP, SUB_CHUNK_TARGET, chunk_text
 from .search.dense_index import DenseIndex
 from .wiki.entity_pages import rebuild_entity_pages
 from .wiki.episodic import append_episode
 from .wiki.index_md import rebuild_index
 from .wiki.log_md import append_log
-from .wiki.pages import Page, page_id_from_path, read_page, stage_or_publish, write_page
+from .wiki.pages import (
+    Page,
+    derive_description,
+    page_id_from_path,
+    read_page,
+    stage_or_publish,
+    write_page,
+)
 from .wiki.reconciler import (
     apply_edit_to_body,
     find_affected_pages,
@@ -64,6 +72,11 @@ CLAIM_PROMPT = (
     "Cap at 12 claims. Skip claims you can't confidently extract.\n"
     "ENTITIES:\n{entities}\n\nSUMMARY:\n{summary}"
 )
+DOC2QUERY_PROMPT = (
+    "Generate 4 short, distinct questions that this document directly answers. "
+    "Phrase them the way a user would naturally ask (who/what/how/why). "
+    'Reply ONLY JSON: {"questions":["…","…","…","…"]}\n\nDOCUMENT SUMMARY:\n'
+)
 CONTRADICTION_PROMPT = (
     "Compare the NEW summary against the EXISTING page content. Does the NEW summary contradict any factual "
     "claim in EXISTING? Reply ONLY JSON: "
@@ -85,18 +98,9 @@ class IngestResult:
     extracted: dict = field(default_factory=dict)
 
 
-def _chunk_text(text: str, *, target_chars: int = 6000, overlap: int = 200) -> list[str]:
-    if len(text) <= target_chars:
-        return [text]
-    chunks: list[str] = []
-    i = 0
-    while i < len(text):
-        end = min(i + target_chars, len(text))
-        chunks.append(text[i:end])
-        if end >= len(text):
-            break
-        i = end - overlap
-    return chunks
+# Canonical chunker lives in search.chunks so retrieval can re-derive the exact
+# sub-chunks at query time (small-to-big). Keep the old local name as an alias.
+_chunk_text = chunk_text
 
 
 def _extract_json(s: str) -> dict | None:
@@ -503,12 +507,51 @@ class Ingestor:
                 continue
         return captioned
 
+    async def _doc2query(self, summary: str) -> list[str]:
+        """Doc2Query (Nogueira & Lin): generate the questions this document answers.
+
+        The questions are indexed alongside the page (`<pid>#hq`) so a user query
+        phrased as a question can match lexically/semantically even when the
+        document itself uses declarative vocabulary. Best-effort — one gemma call.
+        """
+        if not summary:
+            return []
+        try:
+            async with self._sem:
+                raw = await self.c.gemma(DOC2QUERY_PROMPT + summary[:3000], temperature=0.4)
+            data = _extract_json(raw) or {}
+            return [str(q).strip() for q in (data.get("questions") or []) if str(q).strip()][:6]
+        except Exception as e:
+            log.debug("doc2query failed", extra={"metadata": {"error": str(e)[:120]}})
+            return []
+
+    async def _index_doc2query(self, pid: str, title: str, questions: list[str]) -> None:
+        """Index the hypothetical questions as their own retrieval unit `<pid>#hq`."""
+        if not questions:
+            return
+        hq_text = f"{title}\n" + "\n".join(questions)
+        hq_id = f"{pid}#hq"
+        if self.bm25:
+            try:
+                await self.bm25.upsert(hq_id, hq_text)
+            except Exception as e:
+                log.debug("doc2query BM25 upsert failed", extra={"metadata": {"error": str(e)[:120]}})
+        if self.dense:
+            try:
+                await self.dense.upsert(
+                    hq_id, hq_text,
+                    meta={"title": title, "parent_id": pid, "hq": True},
+                )
+            except Exception as e:
+                log.debug("doc2query dense upsert failed", extra={"metadata": {"error": str(e)[:120]}})
+
     async def _index_page_chunks(self, pid: str, title: str, body: str, frontmatter: dict) -> None:
         """Helper to index a page at hierarchical chunk level in BM25 and Chroma."""
         # 1) Clean up any old parent-page or sub-chunk entries to avoid stale chunk residue
         if self.bm25:
             try:
                 await self.bm25.delete(pid)
+                await self.bm25.delete(f"{pid}#hq")
                 for idx in range(50):
                     await self.bm25.delete(f"{pid}#{idx}")
             except Exception:
@@ -516,6 +559,7 @@ class Ingestor:
         if self.dense:
             try:
                 await self.dense.delete(pid)
+                await self.dense.delete(f"{pid}#hq")
                 for idx in range(50):
                     await self.dense.delete(f"{pid}#{idx}")
             except Exception:
@@ -527,7 +571,7 @@ class Ingestor:
             from .search.contextual import merge_context_with_chunk
             text_to_index = merge_context_with_chunk(frontmatter["context_preamble"], text_to_index)
 
-        sub_chunks = _chunk_text(text_to_index, target_chars=1500, overlap=200)
+        sub_chunks = _chunk_text(text_to_index, target_chars=SUB_CHUNK_TARGET, overlap=SUB_CHUNK_OVERLAP)
         for idx, ch in enumerate(sub_chunks):
             chunk_id = f"{pid}#{idx}"
             if self.bm25:
@@ -777,6 +821,12 @@ class Ingestor:
             )
             confidence = floor_score
 
+        # Doc2Query — questions this document answers, indexed as their own unit so
+        # question-phrased user queries match even against declarative source text.
+        hyp_questions: list[str] = []
+        if self.s.ingest_doc2query:
+            hyp_questions = await self._doc2query(summary)
+
         entity_refs = [e.name for e in entities][:50]
         has_tables = any(el.kind == "table" for el in elements)
         has_images = any(el.kind == "image" for el in elements)
@@ -789,7 +839,10 @@ class Ingestor:
             domain = heuristic_domain(f"{title}\n{summary or ''}") or "general"
         frontmatter = {
             "title": title,
+            "kind": "source",
+            "description": derive_description(summary),
             "source": str(src).replace("\\", "/"),
+            "resource": str(src).replace("\\", "/"),
             "ingested": date.today().isoformat(),
             "source_count": 1,
             "confidence": round(confidence, 2),
@@ -800,6 +853,7 @@ class Ingestor:
             "entity_refs": entity_refs,
             "has_tables": has_tables,
             "has_images": has_images,
+            "hypothetical_questions": hyp_questions,
             "element_counts": {
                 "text": sum(1 for el in elements if el.kind == "text"),
                 "heading": sum(1 for el in elements if el.kind == "heading"),
@@ -859,6 +913,8 @@ class Ingestor:
                 log.debug("claim extraction/persist failed",
                           extra={"metadata": {"error": str(e)[:120]}})
         await self._index_page_chunks(pid, title, body, frontmatter)
+        if hyp_questions:
+            await self._index_doc2query(pid, title, hyp_questions)
 
         # ── Multimodal graph (Phase 1): persist tables/images/code/formulas as
         # first-class media nodes linked to entities, each embedded as its own unit.

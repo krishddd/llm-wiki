@@ -23,6 +23,15 @@ log = logging.getLogger(__name__)
 
 MIN_BACKLINKS = 1  # emit a page even for singleton entities — helps Obsidian graph view
 
+# Entity type → OKF `type` string (OKF's required frontmatter field).
+_OKF_ENTITY_TYPE = {
+    "PERSON": "Person",
+    "ORG": "Organization",
+    "CONCEPT": "Concept",
+    "PLACE": "Place",
+    "EVENT": "Event",
+}
+
 
 def _slug(s: str) -> str:
     s = re.sub(r"[^A-Za-z0-9\-]+", "-", s.strip().lower()).strip("-")
@@ -146,6 +155,12 @@ def rebuild_entity_pages(graph, wiki_dir: Path, min_backlinks: int = MIN_BACKLIN
         frontmatter = {
             "title": canonical_name,
             "kind": "entity",
+            # OKF `type` — use the human-readable entity class, not the generic "Entity".
+            "type": _OKF_ENTITY_TYPE.get(type_.upper(), "Concept"),
+            "description": (
+                f"Auto-generated entity page for {canonical_name} ({type_}); "
+                f"appears in {len(backlinks)} wiki page(s)."
+            ),
             "entity_type": type_,
             "canonical_id": canonical_id,
             "aliases": aliases,
@@ -164,9 +179,9 @@ def rebuild_entity_pages(graph, wiki_dir: Path, min_backlinks: int = MIN_BACKLIN
         lines.append("")
         for pid in backlinks:
             title = _lookup_page_title(Path(wiki_dir), pid)
-            # Obsidian-style wiki-link works if the page exists at its slug.
-            stem = Path(pid).stem
-            lines.append(f"- [[{stem}|{title}]]  \n  `{pid}`")
+            # OKF bundle-relative markdown link (stable when pages move; also fine in Obsidian).
+            rel = pid.replace("\\", "/")
+            lines.append(f"- [{title}](/{rel})")
         lines.append("")
 
         if related:
@@ -174,7 +189,7 @@ def rebuild_entity_pages(graph, wiki_dir: Path, min_backlinks: int = MIN_BACKLIN
             lines.append("")
             for name, typ, rel_type in related:
                 other_slug = f"{typ.lower()}-{_slug(name)}"
-                lines.append(f"- **{rel_type}** → [[{other_slug}|{name}]] *(`{typ}`)*")
+                lines.append(f"- **{rel_type}** → [{name}](/entities/{other_slug}.md) *(`{typ}`)*")
             lines.append("")
 
         body = "\n".join(lines)

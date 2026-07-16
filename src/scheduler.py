@@ -119,6 +119,24 @@ async def _lint(state) -> dict:
     return await lint_wiki(page_store=state.page_store)
 
 
+@register_job("build_topics")
+async def _build_topics(state) -> dict:
+    """RAPTOR-lite: cluster live pages and (re)write topic-overview pages."""
+    from .config import get_settings
+    from .llm import get_client
+    from .wiki.topics import build_topic_pages
+    s = get_settings()
+    return await build_topic_pages(
+        wiki_dir=s.wiki_dir,
+        client=get_client(),
+        bm25=state.bm25,
+        dense=state.dense,
+        min_cluster=getattr(s, "topics_min_cluster", 3),
+        max_topics=getattr(s, "topics_max", 12),
+        sim_threshold=getattr(s, "topics_sim_threshold", 0.62),
+    )
+
+
 @register_job("page_compaction")
 async def _page_compaction(state) -> dict:
     from .config import get_settings
@@ -169,6 +187,7 @@ def make_scheduler(state):
         ("lint_autofix",      5,  0,  "sun"),
         ("detect_procedures", 6,  0,  "sun"),
         ("page_compaction",   7,  0,  "sun"),
+        ("build_topics",      7, 30,  "sun"),
     ]
     for name, hour, minute, dow in schedule:
         if not getattr(s, f"job_{name}_enabled", True):
