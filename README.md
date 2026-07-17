@@ -179,6 +179,34 @@ Every step is logged in JSON to `logs/app.log`; security-relevant events
 (writes, accepts/rejects, contradictions, supersessions) also go to
 `logs/audit.log`.
 
+### Review & the Autopilot
+
+Pages scoring below the confidence gate (0.60) land in `wiki/review/` instead of
+going live — the ingest-time score is the model's *self-assessment* and errs
+cautious. The **Review Autopilot** then closes the loop automatically with a
+strictly stronger verification:
+
+1. an LLM judge re-reads the staged page **against the original source document**
+   and scores faithfulness + coverage (evidence-grounded, not self-assessed);
+2. a deterministic cross-check measures how many of the page's extracted entities
+   literally appear in the source (composite = 0.7 × judge + 0.3 × grounding);
+3. borderline composites get a **second judge vote** from the reason role
+   (a different model when your roles are split) and the votes average;
+4. decision: **≥ 0.70 auto-accept** (moved to `sources/`, indexed, audit-logged),
+   **≤ 0.30 auto-archive** (moved to `wiki/archive/` — reversible, never deleted),
+   **in between → stays in review**, annotated with the judge's scores + reasons
+   (visible via `GET /review` and in the page frontmatter as `auto_review`).
+
+It runs inline right after ingest for each staged page, daily at 04:30 UTC for
+the backlog, and on demand via `POST /admin/run/review_autopilot`. Pages whose
+source can't be re-read (deleted files, machine-generated pages) are always left
+for a human. Knobs: `REVIEW_AUTOPILOT_ENABLED`, `REVIEW_ACCEPT_THRESHOLD`,
+`REVIEW_REJECT_THRESHOLD`, `REVIEW_SECOND_OPINION`.
+
+For the (now rare) pages left in review: `GET /review` lists them with the
+judge's annotation, then `POST /review/{id}/accept` or `/reject` — or use the
+dashboard at `/dashboard`.
+
 ---
 
 ## The query pipeline
@@ -369,6 +397,7 @@ var). Manual one-off runs available via `POST /admin/run/{job_name}`.
 | daily 03:00      | `decay_sweep`        | `JOB_DECAY_SWEEP_ENABLED`          |
 | daily 03:30      | `episodic_prune`     | `JOB_EPISODIC_PRUNE_ENABLED`       |
 | daily 04:00      | `promote_episodic`   | `JOB_PROMOTE_EPISODIC_ENABLED`     |
+| daily 04:30      | `review_autopilot`   | `JOB_REVIEW_AUTOPILOT_ENABLED`     |
 | weekly Sun 05:00 | `lint_autofix`       | `JOB_LINT_AUTOFIX_ENABLED`         |
 | weekly Sun 06:00 | `detect_procedures`  | `JOB_DETECT_PROCEDURES_ENABLED`    |
 | weekly Sun 07:00 | `page_compaction`    | `JOB_PAGE_COMPACTION_ENABLED`      |

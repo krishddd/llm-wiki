@@ -119,6 +119,22 @@ async def _lint(state) -> dict:
     return await lint_wiki(page_store=state.page_store)
 
 
+@register_job("review_autopilot")
+async def _review_autopilot(state) -> dict:
+    """Evidence-grounded auto-verification sweep over wiki/review/ backlog."""
+    from .config import get_settings
+    from .llm import get_client
+    from .wiki.review_autopilot import autopilot_review
+    s = get_settings()
+    return await autopilot_review(
+        wiki_dir=s.wiki_dir,
+        client=get_client(),
+        bm25=state.bm25,
+        dense=state.dense,
+        settings=s,
+    )
+
+
 @register_job("build_topics")
 async def _build_topics(state) -> dict:
     """RAPTOR-lite: cluster live pages and (re)write topic-overview pages."""
@@ -184,6 +200,7 @@ def make_scheduler(state):
         ("decay_sweep",       3,  0,  None),
         ("episodic_prune",    3, 30,  None),
         ("promote_episodic",  4,  0,  None),
+        ("review_autopilot",  4, 30,  None),
         ("lint_autofix",      5,  0,  "sun"),
         ("detect_procedures", 6,  0,  "sun"),
         ("page_compaction",   7,  0,  "sun"),

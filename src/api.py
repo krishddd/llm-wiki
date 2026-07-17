@@ -449,6 +449,10 @@ async def list_review() -> dict[str, Any]:
             "title": fm.get("title"),
             "confidence": fm.get("confidence"),
             "source": fm.get("source"),
+            # Review Autopilot verdict (present when the page sat in the gray zone):
+            # composite/faithfulness/coverage scores + the judge's reasons, so the
+            # human knows exactly what to check before accepting.
+            "auto_review": fm.get("auto_review"),
         })
     return {"count": len(items), "items": items}
 

@@ -10,6 +10,7 @@ _Auto-generated — do not edit by hand._
 
 - [Active Inference For Ai Safety](sources/active-inference-for-ai-safety.md) - Large Language Models (LLMs) and Large Reasoning Models (LRMs) face a critical paradox: their near-human fluency masks systemic overconfidence and susceptibility to hallucinations—generating fluent… (conf 0.95)
 - [Agent Reliability Simulation Framework](sources/agent-reliability-simulation-framework.md) - The deployment of Large Language Model (LLM)-based agents has introduced a fundamental crisis in software reliability engineering, shifting from deterministic code to probabilistic, goal-oriented… (conf 0.75)
+- [Llm Context, Hallucinations, And Memory](sources/llm-context-hallucinations-and-memory.md) - The field of Large Language Models (LLMs) faces a critical paradox: while context windows have expanded dramatically—from GPT-4’s 4,096 tokens to millions in models like Gemini 1.5 and Claude… (conf 0.79)
 
 ## Entities
 
@@ -487,4 +488,3 @@ _Auto-generated — do not edit by hand._
 ## Review (staged)
 
 - [Agent Testing And Evaluation Research](review/agent-testing-and-evaluation-research.md) - The transition to autonomous, multi-agent systems necessitates specialized evaluation frameworks tailored to their architectural derivation, with two primary paradigms: social simulation and… (conf 0.45)
-- [Llm Context, Hallucinations, And Memory](review/llm-context-hallucinations-and-memory.md) - The field of Large Language Models (LLMs) faces a critical paradox: while context windows have expanded dramatically—from GPT-4’s 4,096 tokens to millions in models like Gemini 1.5 and Claude… (conf 0.45)
