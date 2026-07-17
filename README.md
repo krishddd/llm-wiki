@@ -37,6 +37,7 @@ flowchart LR
         PLAN --> SUMM["Summarise + extract entities/claims"]
         SUMM --> CONF["Merge + confidence gate"]
         CONF --> D2Q["Doc2Query questions"]
+        D2Q --> AUTO["Review Autopilot<br/>staged pages verified vs source"]
     end
 
     subgraph STORE["Knowledge store"]
@@ -52,7 +53,7 @@ flowchart LR
         RET --> SYNTH["Synthesis + citations<br/>+ NLI claim verification"]
     end
 
-    SCHED["Scheduler<br/>decay · promote · lint · procedures · topics"]
+    SCHED["Scheduler<br/>decay · promote · review autopilot<br/>lint · procedures · topics"]
 
     DOCS --> ING
     OKFIN --> WIKI
@@ -185,6 +186,21 @@ Pages scoring below the confidence gate (0.60) land in `wiki/review/` instead of
 going live — the ingest-time score is the model's *self-assessment* and errs
 cautious. The **Review Autopilot** then closes the loop automatically with a
 strictly stronger verification:
+
+```mermaid
+flowchart TD
+    STAGED["Staged page<br/>(below 0.60 gate)"] --> SRC{"Original source<br/>re-readable?"}
+    SRC -- no --> HUMAN["Left for human<br/>GET /review → accept / reject"]
+    SRC -- yes --> JUDGE["Evidence-grounded judge<br/>page vs source → faithfulness + coverage"]
+    JUDGE --> GROUND["+ deterministic entity-grounding<br/>composite = 0.7·judge + 0.3·grounding"]
+    GROUND --> BORDER{"near a<br/>threshold?"}
+    BORDER -- yes --> SECOND["Second judge vote<br/>(reason role) → average"]
+    BORDER -- no --> DECIDE{"composite"}
+    SECOND --> DECIDE
+    DECIDE -- "≥ 0.70" --> ACCEPT["Auto-accept<br/>→ sources/, indexed, live"]
+    DECIDE -- "≤ 0.30" --> ARCHIVE["Auto-archive<br/>→ wiki/archive/ (reversible)"]
+    DECIDE -- "0.30–0.70" --> ANNOTATE["Stay in review<br/>annotated with scores + reasons"]
+```
 
 1. an LLM judge re-reads the staged page **against the original source document**
    and scores faithfulness + coverage (evidence-grounded, not self-assessed);
