@@ -26,7 +26,7 @@
 | `list_entities(limit=50)` | Canonical entities by backlink count. |
 | `session_crystallize(correlation_ids, days=14)` | Distil an exploration thread into one wiki page. |
 | `context_start(days=7, top_pages=5)` | Session-start briefing. |
-| `run_admin_job(job_name)` | Manually trigger one of: `decay_sweep`, `episodic_prune`, `promote_episodic`, `lint_autofix`, `detect_procedures`, `lint`. |
+| `run_admin_job(job_name)` | Manually trigger one of: `decay_sweep`, `episodic_prune`, `promote_episodic`, `review_autopilot`, `lint_autofix`, `detect_procedures`, `build_topics`, `page_compaction`, `lint`. |
 
 ## Resources (MCP)
 
