@@ -1071,6 +1071,29 @@ class Ingestor:
         except Exception as e:
             log.debug("audit failed", extra={"metadata": {"error": str(e)[:200]}})
 
+        # ── Review Autopilot (inline) ────────────────────────────────────────
+        # A freshly staged page gets an immediate evidence-grounded verification
+        # pass instead of waiting for a human (or the daily sweep). If the judge
+        # accepts, the page goes live right now and the result reflects that.
+        if not is_live and getattr(self.s, "review_autopilot_enabled", True):
+            try:
+                from .wiki.review_autopilot import autopilot_review
+                ar = await autopilot_review(
+                    wiki_dir=self.s.wiki_dir, client=self.c,
+                    bm25=self.bm25, dense=self.dense, settings=self.s,
+                    only_page=Path(page_path).name,
+                )
+                outcome = (ar.get("outcomes") or [{}])[0]
+                if outcome.get("action") == "accepted":
+                    is_live = True
+                    page_path = self.s.wiki_dir / "sources" / Path(page_path).name
+                    confidence = float(outcome.get("composite") or confidence)
+                    log.info("review autopilot auto-accepted staged page",
+                             extra={"metadata": {"page": str(page_path), "composite": confidence}})
+            except Exception as e:
+                log.warning("review autopilot inline pass failed",
+                            extra={"metadata": {"error": str(e)[:200]}})
+
         return IngestResult(
             source=str(src),
             page_path=str(page_path),

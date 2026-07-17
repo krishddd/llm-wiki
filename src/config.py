@@ -188,6 +188,21 @@ class Settings(BaseSettings):
     topics_max: int = 12
     topics_sim_threshold: float = 0.62
 
+    # ── Review Autopilot ─────────────────────────────────────────────────────
+    # Evidence-grounded auto-verification of staged review pages: an LLM judge
+    # re-reads each staged page AGAINST its original source (+ a deterministic
+    # entity-grounding cross-check). composite ≥ accept → auto-publish;
+    # ≤ reject → auto-archive (never deleted); in between → annotated for human
+    # review. Runs inline after ingest for freshly staged pages, plus a daily
+    # sweep job for the backlog.
+    review_autopilot_enabled: bool = True        # inline post-ingest pass
+    job_review_autopilot_enabled: bool = True    # daily backlog sweep (04:30 UTC)
+    review_accept_threshold: float = 0.70
+    review_reject_threshold: float = 0.30
+    # Borderline composites get a second judge (reason role) and the votes average.
+    review_second_opinion: bool = True
+    review_autopilot_max_pages: int = 25         # per sweep, bounds LLM cost
+
     # 2026 features:
     # Memory evolution — A-Mem reconciler. After a new source is ingested, edit
     # affected pre-existing pages instead of leaving them frozen.

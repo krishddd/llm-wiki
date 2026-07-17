@@ -227,6 +227,14 @@ correlation_ids: [COR-...]   # only on crystallized / promoted
 ```
 
 **Confidence gate**: `>= confidence_threshold` (default 0.60) → `wiki/sources/`, else `wiki/review/`.
+Staged pages then pass through the **Review Autopilot** (`wiki/review_autopilot.py`):
+an evidence-grounded judge compares the page against its original source, blended
+with a deterministic entity-grounding check (composite = 0.7×judge + 0.3×grounding;
+borderline cases get a second judge vote from the reason role). ≥0.70 auto-accepts
+(indexed + `WIKI_REVIEW_ACCEPT by=auto`), ≤0.30 auto-archives to `wiki/archive/`
+(reversible — nothing is deleted), and the gray zone stays in review with an
+`auto_review` frontmatter annotation (scores + judge reasons) surfaced by
+`GET /review`. Pages whose source can't be re-read are always left for the human.
 
 **Bi-temporal facts** (separate from page confidence): every claim in the `facts`
 table carries `ingested_at`, optional `valid_from`, optional `valid_to`,
@@ -250,6 +258,10 @@ load_elements (multi-format)
   → contextual preamble (Anthropic) for embedding text
   → Doc2Query: summary-role generates the questions the doc answers → indexed as <pid>#hq   [v5]
   → write to sources/ or review/
+       → Review Autopilot on staged pages: evidence-grounded judge re-reads the
+         page AGAINST the source (+ entity-grounding cross-check + second-opinion
+         vote near boundaries) → auto-accept ≥0.70 / auto-archive ≤0.30 /
+         annotate the gray zone for humans   [REVIEW_AUTOPILOT_ENABLED]
   → upsert entities + relations
   → extract S-P-O claims (reason role) → add_fact()         [v2]
   → contradiction detection vs. related pages
@@ -316,6 +328,7 @@ reason-role scans first 30 pages
 | daily 03:00 | `decay_sweep` | `JOB_DECAY_SWEEP_ENABLED` |
 | daily 03:30 | `episodic_prune` | `JOB_EPISODIC_PRUNE_ENABLED` |
 | daily 04:00 | `promote_episodic` | `JOB_PROMOTE_EPISODIC_ENABLED` |
+| daily 04:30 | `review_autopilot` (backlog sweep) | `JOB_REVIEW_AUTOPILOT_ENABLED` |
 | weekly Sun 05:00 | `lint_autofix` | `JOB_LINT_AUTOFIX_ENABLED` |
 | weekly Sun 06:00 | `detect_procedures` | `JOB_DETECT_PROCEDURES_ENABLED` |
 | weekly Sun 07:30 | `build_topics` (RAPTOR-lite topic overviews) | `JOB_BUILD_TOPICS_ENABLED` |
