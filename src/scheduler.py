@@ -131,6 +131,7 @@ async def _review_autopilot(state) -> dict:
         client=get_client(),
         bm25=state.bm25,
         dense=state.dense,
+        graph=getattr(state, "graph", None),
         settings=s,
     )
 

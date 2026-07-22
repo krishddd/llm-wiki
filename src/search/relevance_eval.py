@@ -54,7 +54,7 @@ def _parse_verdict(raw: str) -> tuple[Verdict, float]:
     if not m:
         return "ambiguous", 0.5
     try:
-        d = json.loads(m.group(0))
+        d = json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return "ambiguous", 0.5
     v = str(d.get("relevance", "ambiguous")).strip().lower()

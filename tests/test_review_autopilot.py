@@ -91,9 +91,14 @@ async def test_autopilot_accepts_high_composite(tmp_path: Path):
     assert not (wiki / "review" / "staged-doc.md").exists()
     dst = wiki / "sources" / "staged-doc.md"
     assert dst.exists()
-    assert bm25.upserts == ["sources/staged-doc.md"]
+    # Promoted page is indexed via small-to-big sub-chunks under its NEW sources id
+    # (not a monolithic blob under the review id) — every unit is a `sources/...#<n>`.
+    assert bm25.upserts, "expected the promoted page to be indexed"
+    assert all(u.startswith("sources/staged-doc.md#") for u in bm25.upserts)
+    assert not any(u.startswith("review/") for u in bm25.upserts)
     fm = read_page(dst).frontmatter
     assert fm["confidence"] >= 0.70            # confidence updated to composite
+    assert fm["auto_review"]["verdict"] == "auto-accepted"   # provenance preserved on accept
     assert client.reason_calls == 0            # far from boundary → no second opinion
 
 

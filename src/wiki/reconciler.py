@@ -78,7 +78,7 @@ def _extract_json(s: str) -> dict | None:
     if not m:
         return None
     try:
-        return json.loads(m.group(0))
+        return json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return None
 

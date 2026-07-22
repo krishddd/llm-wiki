@@ -303,6 +303,40 @@ class KnowledgeGraph:
             )
             return [str(r[0]) for r in cur.fetchall()]
 
+    async def reassign_page_id(self, old_pid: str, new_pid: str) -> None:
+        """Re-point every page-keyed row from `old_pid` to `new_pid`.
+
+        Used when a staged `review/*` page is promoted to `sources/*`: without this,
+        its facts/entities/relations/media keep pointing at the review path, so
+        `pages_for_entity` and the contradiction detector silently skip the page once
+        the file has moved. Media `embedding_id`s (`<pid>#media#<n>`) are rewritten to
+        the new prefix for consistency; the promotion path deletes/re-embeds the
+        actual dense vectors separately.
+        """
+        if not old_pid or not new_pid or old_pid == new_pid:
+            return
+        async with self._lock:
+            cur = self._conn.cursor()
+            for sql in (
+                "UPDATE facts SET source_page = ? WHERE source_page = ?",
+                "UPDATE OR IGNORE page_entities SET page_id = ? WHERE page_id = ?",
+                "UPDATE relations SET source_page = ? WHERE source_page = ?",
+            ):
+                with contextlib.suppress(sqlite3.Error):
+                    cur.execute(sql, (new_pid, old_pid))
+            # media_nodes embedding_id rewrite (needs the old page_id in WHERE, so run
+            # before the page_id column itself is updated).
+            with contextlib.suppress(sqlite3.Error):
+                cur.execute(
+                    "UPDATE media_nodes SET embedding_id = REPLACE(embedding_id, ?, ?) WHERE page_id = ?",
+                    (f"{old_pid}#media#", f"{new_pid}#media#", old_pid),
+                )
+            with contextlib.suppress(sqlite3.Error):
+                cur.execute("UPDATE media_nodes SET page_id = ? WHERE page_id = ?", (new_pid, old_pid))
+            with contextlib.suppress(sqlite3.Error):
+                cur.execute("UPDATE OR IGNORE page_access SET page_id = ? WHERE page_id = ?", (new_pid, old_pid))
+            self._conn.commit()
+
     # ─────────────────────────────────────────────────────────────────
     # Multimodal graph API (Phase 1) — modality nodes + media↔entity edges
     # ─────────────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ Advanced techniques wired in (all optional, controllable via flags):
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -144,6 +145,7 @@ class QueryResult:
     quality_issues: list[str] = field(default_factory=list)
     per_claim_confidences: list[dict] = field(default_factory=list)
     related_media: list[dict] = field(default_factory=list)
+    cached: bool = False   # served from the semantic answer cache (no fresh synthesis)
 
 
 def _extract_json(s: str) -> dict | None:
@@ -153,7 +155,7 @@ def _extract_json(s: str) -> dict | None:
     if not m:
         return None
     try:
-        return json.loads(m.group(0))
+        return json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return None
 
@@ -249,10 +251,31 @@ def _check_grounded(answer: str, citations: list[Citation]) -> tuple[bool, int]:
     ungrounded = 0
     for t in tokens:
         t_low = t.strip().lower()
-        # Any cited title that overlaps the token substring-wise counts as grounded.
-        if not any(t_low in ct or ct in t_low for ct in cited_titles):
-            ungrounded += 1
+        if _token_matches_title(t_low, cited_titles):
+            continue
+        ungrounded += 1
     return ungrounded == 0, ungrounded
+
+
+def _token_matches_title(token: str, cited_titles: set[str]) -> bool:
+    """Decide whether a bracketed citation token grounds against a cited page title.
+
+    Exact match always counts. Substring matching is otherwise too loose — a short
+    token like `[AI]` would ground against any title containing "ai". So a
+    substring hit only counts when the shorter string is a *word-boundary* match
+    inside the longer AND is long enough (≥4 chars) to be discriminating.
+    """
+    if not token:
+        return False
+    for ct in cited_titles:
+        if token == ct:
+            return True
+        short, long = (token, ct) if len(token) <= len(ct) else (ct, token)
+        if len(short) < 4:
+            continue
+        if re.search(rf"(?<![a-z0-9]){re.escape(short)}(?![a-z0-9])", long):
+            return True
+    return False
 
 
 # ───── Engine ─────
@@ -274,6 +297,11 @@ class QueryEngine:
         self.graph = graph
         self.s = settings or get_settings()
         self.c = client or get_client()
+        # Procedural store is injected post-construction by the API (see api.py).
+        # Default to None so engines built without it (e.g. the eval harness) work.
+        self.procedures = None
+        # Semantic answer cache — likewise injected post-construction; None disables it.
+        self.answer_cache = None
 
     # ── Advanced pre-retrieval helpers ──
 
@@ -315,6 +343,103 @@ class QueryEngine:
             use_chunk_context=getattr(self.s, "query_chunk_context", True),
             synth_downweight=getattr(self.s, "retrieval_synth_downweight", 0.85),
         )
+
+    # ── Semantic answer cache ──
+
+    async def _embed_question(self, question: str) -> list[float] | None:
+        """Embed a question for the answer cache. Prefers the dense index's embedder
+        (same space as retrieval) and falls back to the LLM client."""
+        for fn in (getattr(self.dense, "_embed", None), getattr(self.c, "embed", None)):
+            if fn is None:
+                continue
+            try:
+                vec = await fn(question)
+                if vec:
+                    return list(vec)
+            except Exception as e:
+                log.debug("answer-cache embed failed", extra={"metadata": {"error": str(e)[:120]}})
+        return None
+
+    async def _cache_hit_is_fresh(self, hit: dict) -> bool:
+        """Staleness guard for a cached answer (correctness safety, threshold-independent).
+
+        A cached answer references specific pages; if any of them has since been
+        archived / rejected / superseded (its file no longer resolves), the answer may
+        now be misleading, so it must not be served. This makes the cache safe to
+        enable even with a loosely-tuned similarity threshold: the worst a false-
+        positive similarity match can do is trigger a fresh answer, never surface an
+        answer built on pages that are gone. Controlled by `answer_cache_verify_pages`.
+        """
+        if not getattr(self.s, "answer_cache_verify_pages", True):
+            return True
+        pages = hit.get("retrieved_pages") or []
+        if not pages or self.page_store is None:
+            return True
+        for pid in pages:
+            try:
+                if not await self.page_store.get_text(pid):
+                    return False
+            except Exception:
+                return False
+        return True
+
+    def _result_from_cache(self, payload: dict) -> QueryResult:
+        """Rebuild a faithful QueryResult from a cached payload. Blocks are re-parsed
+        from the stored answer markdown so the UI shape matches a fresh answer."""
+        cits = [
+            Citation(
+                page=c.get("page", ""), title=c.get("title", ""), snippet=c.get("snippet", ""),
+                has_tables=bool(c.get("has_tables")), has_images=bool(c.get("has_images")),
+                has_code=bool(c.get("has_code")),
+            )
+            for c in payload.get("citations") or []
+        ]
+        answer = str(payload.get("answer", ""))
+        try:
+            blocks = parse_blocks(answer)
+        except Exception:
+            blocks = [AnswerBlock(kind="text", content=answer)]
+        return QueryResult(
+            answer=answer,
+            answer_raw=str(payload.get("answer_raw", answer)),
+            summary=str(payload.get("summary", "")),
+            key_points=list(payload.get("key_points") or []),
+            citations=cits,
+            blocks=blocks,
+            follow_up_questions=list(payload.get("follow_up_questions") or []),
+            entities=list(payload.get("entities") or []),
+            confidence=float(payload.get("confidence", 0.0)),
+            retrieved_pages=list(payload.get("retrieved_pages") or []),
+            sub_queries=list(payload.get("sub_queries") or []),
+            grounded=bool(payload.get("grounded", True)),
+            intent=str(payload.get("intent", "synthesis")),
+            reasoner=str(payload.get("reasoner", "reason")),
+            per_claim_confidences=list(payload.get("per_claim_confidences") or []),
+            cached=True,
+        )
+
+    def _cache_payload(self, result: QueryResult) -> dict:
+        """JSON-safe subset of a QueryResult for the answer cache."""
+        return {
+            "answer": result.answer,
+            "answer_raw": result.answer_raw,
+            "summary": result.summary,
+            "key_points": result.key_points,
+            "citations": [
+                {"page": c.page, "title": c.title, "snippet": c.snippet,
+                 "has_tables": c.has_tables, "has_images": c.has_images, "has_code": c.has_code}
+                for c in result.citations
+            ],
+            "follow_up_questions": result.follow_up_questions,
+            "entities": result.entities,
+            "confidence": result.confidence,
+            "retrieved_pages": result.retrieved_pages,
+            "sub_queries": result.sub_queries,
+            "grounded": result.grounded,
+            "intent": result.intent,
+            "reasoner": result.reasoner,
+            "per_claim_confidences": result.per_claim_confidences,
+        }
 
     # ── Save-back ──
 
@@ -414,10 +539,46 @@ class QueryEngine:
 
         crag_overall = "correct"
         crag_ceiling = 1.0
+        # Always defined — the procedural-recall branch below can skip the block
+        # that would otherwise assign it, but the final QueryResult still reads it.
+        sub_queries: list[str] = [question]
+
+        # 0b) Semantic answer cache — a fuzzy short-circuit for near-duplicate
+        # questions (complements the procedural store's EXACT hash). Opt-in; a hit
+        # returns the stored answer without retrieval/synthesis. The question embed
+        # (needed on a miss too) is reused as the store key at the end.
+        question_vec: list[float] | None = None
+        if getattr(self, "answer_cache", None) is not None and getattr(self.s, "query_answer_cache", False):
+            question_vec = await self._embed_question(question)
+            if question_vec:
+                try:
+                    hit = self.answer_cache.lookup(
+                        question_vec,
+                        threshold=self.s.answer_cache_sim_threshold,
+                        ttl_days=self.s.answer_cache_ttl_days,
+                    )
+                except Exception as e:
+                    hit = None
+                    log.debug("answer-cache lookup failed", extra={"metadata": {"error": str(e)[:120]}})
+                if hit and not await self._cache_hit_is_fresh(hit):
+                    log.info(
+                        "answer cache hit rejected — cited page(s) no longer present",
+                        extra={"metadata": {"matched": str(hit.get("_cache_question", ""))[:120]}},
+                    )
+                    hit = None
+                if hit:
+                    log.info(
+                        "answer cache hit",
+                        extra={"metadata": {
+                            "similarity": hit.get("_cache_similarity"),
+                            "matched": str(hit.get("_cache_question", ""))[:120],
+                        }},
+                    )
+                    return self._result_from_cache(hit)
 
         # Active Procedural Execution: Check if this question matches a crystallized procedure
         matched_procedure = None
-        if self.procedures:
+        if getattr(self, "procedures", None):
             try:
                 from .wiki.procedures import _pattern_hash
                 ph = _pattern_hash(question)
@@ -539,7 +700,7 @@ class QueryEngine:
                 entities=[],
                 confidence=0.0,
                 retrieved_pages=[],
-                sub_queries=sub_queries if not matched_procedure else [question],
+                sub_queries=sub_queries,
                 grounded=True,
             )
 
@@ -561,18 +722,22 @@ class QueryEngine:
                     if ent not in entities_to_query:
                         entities_to_query.append(ent)
 
-            for ent in entities_to_query[:15]:
-                try:
-                    facts = await self.graph.active_facts_for(ent)
-                    for f in facts:
-                        key = (ent.lower(), f["predicate"].lower(), f["object"].lower())
-                        if key not in seen_facts:
-                            seen_facts.add(key)
-                            active_facts.append(
-                                f"- **{ent}** {f['predicate']} *{f['object']}* (Source: {f['source_page']})"
-                            )
-                except Exception as e:
-                    log.debug("GraphRAG facts query failed", extra={"metadata": {"entity": ent, "error": str(e)[:120]}})
+            query_ents = entities_to_query[:15]
+            fact_results = await asyncio.gather(
+                *(self.graph.active_facts_for(ent) for ent in query_ents),
+                return_exceptions=True,
+            )
+            for ent, facts in zip(query_ents, fact_results, strict=False):
+                if isinstance(facts, BaseException):
+                    log.debug("GraphRAG facts query failed", extra={"metadata": {"entity": ent, "error": str(facts)[:120]}})
+                    continue
+                for f in facts:
+                    key = (ent.lower(), f["predicate"].lower(), f["object"].lower())
+                    if key not in seen_facts:
+                        seen_facts.add(key)
+                        active_facts.append(
+                            f"- **{ent}** {f['predicate']} *{f['object']}* (Source: {f['source_page']})"
+                        )
 
         fact_context = ""
         if active_facts:
@@ -585,11 +750,14 @@ class QueryEngine:
         related_media: list[dict] = []
         if self.s.graph_multimodal_nodes and self.graph and hasattr(self.graph, "media_for_entity"):
             seen_media: set[int] = set()
-            for ent in entities_to_query[:15]:
-                try:
-                    media = await self.graph.media_for_entity(ent, limit=3)
-                except Exception as e:
-                    log.debug("media_for_entity failed", extra={"metadata": {"entity": ent, "error": str(e)[:120]}})
+            media_ents = entities_to_query[:15]
+            media_results = await asyncio.gather(
+                *(self.graph.media_for_entity(ent, limit=3) for ent in media_ents),
+                return_exceptions=True,
+            )
+            for ent, media in zip(media_ents, media_results, strict=False):
+                if isinstance(media, BaseException):
+                    log.debug("media_for_entity failed", extra={"metadata": {"entity": ent, "error": str(media)[:120]}})
                     continue
                 for m in media:
                     if m["id"] not in seen_media:
@@ -716,21 +884,6 @@ class QueryEngine:
             except Exception as e:
                 log.debug("reflection failed", extra={"metadata": {"error": str(e)[:120]}})
 
-        # 6) Save-back: persist valuable syntheses as wiki pages.
-        saved = None
-        if save_back and confidence >= SAVE_BACK_CONF and len(cits) >= 2:
-            saved = await self._save_synthesis_page(
-                question,
-                {
-                    "answer": answer_text,
-                    "summary": str(data.get("summary", "")),
-                    "key_points": data.get("key_points") or [],
-                    "entities": data.get("entities") or [],
-                    "confidence": confidence,
-                },
-                cits,
-            )
-
         # 7) NotebookLM-style post-processing.
         # 7a) Parse per-claim confidence markers `[Page]^0.NN` BEFORE numbering.
         per_claim: list[Claim] = []
@@ -762,6 +915,24 @@ class QueryEngine:
                 confidence = round(0.5 * confidence + 0.5 * claim_overall, 3)
                 # Strip the `^0.NN` markers from the user-facing answer.
                 answer_text = strip_confidence_markers(answer_text)
+
+        # 7a-ter) Save-back: persist valuable syntheses as wiki pages. Deliberately
+        # runs AFTER NLI-lite claim verification recalibrates `confidence`, so a page
+        # is never persisted with an inflated pre-verification score (a synthesis the
+        # verifier knocks below SAVE_BACK_CONF must NOT be saved).
+        saved = None
+        if save_back and confidence >= SAVE_BACK_CONF and len(cits) >= 2:
+            saved = await self._save_synthesis_page(
+                question,
+                {
+                    "answer": answer_text,
+                    "summary": str(data.get("summary", "")),
+                    "key_points": data.get("key_points") or [],
+                    "entities": data.get("entities") or [],
+                    "confidence": confidence,
+                },
+                cits,
+            )
 
         #    b) Number citations [Title] → [1], aligned to citation order in `cits`.
         cite_titles = [c.title for c in cits]
@@ -796,7 +967,7 @@ class QueryEngine:
                 log.debug("procedure record failed",
                           extra={"metadata": {"error": str(e)[:120]}})
 
-        return QueryResult(
+        result = QueryResult(
             answer=numbered_answer,
             answer_raw=answer_text,
             summary=str(data.get("summary", ""))[:500],
@@ -821,3 +992,22 @@ class QueryEngine:
             ],
             related_media=related_media,
         )
+
+        # 0b-store) Populate the semantic answer cache. Only well-grounded, confident
+        # answers are cached, and never the "no relevant pages" placeholder above.
+        if (
+            question_vec
+            and getattr(self, "answer_cache", None) is not None
+            and grounded
+            and confidence >= getattr(self.s, "answer_cache_min_confidence", 0.60)
+        ):
+            try:
+                self.answer_cache.store(
+                    question, question_vec, self._cache_payload(result), confidence,
+                    max_entries=self.s.answer_cache_max_entries,
+                    ttl_days=self.s.answer_cache_ttl_days,
+                )
+            except Exception as e:
+                log.debug("answer-cache store failed", extra={"metadata": {"error": str(e)[:120]}})
+
+        return result

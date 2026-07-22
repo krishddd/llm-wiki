@@ -79,6 +79,15 @@ PROVIDER_DEFS: dict[str, ProviderDef] = {
         embed_model_attr="custom_embed_model",
         key_optional=True,
     ),
+    # NVIDIA build.nvidia.com — OpenAI-compatible NIM gateway. One key covers many
+    # open-weight chat models + retrieval embedders. NVIDIA's `nv-embedqa*` embedders
+    # require an `input_type` param the plain OpenAI schema omits, so the embed leg
+    # attaches `nvidia_embed_input_type` (+ truncate) via `embed_extra` below.
+    "nvidia": ProviderDef(
+        "nvidia_base_url", "nvidia_api_key", "nvidia_model",
+        vision_model_attr="nvidia_vision_model",
+        embed_model_attr="nvidia_embed_model",
+    ),
 }
 
 
@@ -89,6 +98,7 @@ class ProviderSpec:
     api_key: str
     model: str
     force_max_tokens: bool = False
+    embed_extra: dict | None = None   # extra /embeddings body params (e.g. NVIDIA input_type)
 
 
 def _spec(settings, provider: str, model_attr: str | None) -> ProviderSpec | None:
@@ -125,7 +135,16 @@ def resolve_embed_provider(settings) -> ProviderSpec | None:
     provider = (getattr(settings, "provider_embed", "ollama") or "ollama").lower()
     if provider == "ollama" or provider not in PROVIDER_DEFS:
         return None
-    return _spec(settings, provider, PROVIDER_DEFS[provider].embed_model_attr)
+    spec = _spec(settings, provider, PROVIDER_DEFS[provider].embed_model_attr)
+    if spec is not None and provider == "nvidia":
+        # NVIDIA retrieval embedders (nv-embedqa*) require `input_type`; symmetric ones
+        # (bge-m3) accept it harmlessly. `truncate:END` avoids over-length 400s.
+        input_type = (getattr(settings, "nvidia_embed_input_type", "") or "").strip()
+        extra: dict = {"truncate": "END"}
+        if input_type:
+            extra["input_type"] = input_type
+        spec.embed_extra = extra
+    return spec
 
 
 def resolve_vision_provider(settings) -> ProviderSpec | None:
@@ -232,9 +251,12 @@ async def embed_one(
     timeout: float = 120.0,
 ) -> list[float]:
     """OpenAI-compatible embeddings call (Gemini). Raises httpx.HTTPError on failure."""
+    body: dict = {"model": spec.model, "input": text}
+    if spec.embed_extra:
+        body.update(spec.embed_extra)
     r = await http.post(
         f"{spec.base_url}/embeddings",
-        json={"model": spec.model, "input": text},
+        json=body,
         headers=_auth_headers(spec.api_key), timeout=timeout,
     )
     r.raise_for_status()
