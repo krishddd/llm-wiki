@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     xai_api_key: str = ""
     openrouter_api_key: str = ""
     custom_api_key: str = ""           # optional — local gateways (vLLM/LM Studio) need none
+    nvidia_api_key: str = ""           # build.nvidia.com NIM key (nvapi-...)
 
     # Provider model names.
     groq_model: str = "llama-3.3-70b-versatile"
@@ -68,6 +69,14 @@ class Settings(BaseSettings):
     openrouter_model: str = "meta-llama/llama-3.3-70b-instruct"
     custom_model: str = ""             # e.g. whatever your vLLM/LM Studio serves
     custom_embed_model: str = ""
+    # NVIDIA build.nvidia.com models. One text model serves every text role
+    # (summary/reason/fast/solver); embeddings use a retrieval embedder.
+    nvidia_model: str = "meta/llama-3.3-70b-instruct"
+    nvidia_embed_model: str = "nvidia/nv-embedqa-e5-v5"
+    nvidia_vision_model: str = "meta/llama-3.2-11b-vision-instruct"
+    # NVIDIA embedders need an input_type; "query" keeps query+passage in one space
+    # (set "" for symmetric models like baai/bge-m3 that don't want it).
+    nvidia_embed_input_type: str = "query"
     # Vision (multimodal) model names. Most flagship chat models are already
     # multimodal; empty → vision falls back to Ollama for that provider.
     groq_vision_model: str = ""
@@ -88,6 +97,7 @@ class Settings(BaseSettings):
     xai_base_url: str = "https://api.x.ai/v1"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     custom_base_url: str = ""          # e.g. http://localhost:8001/v1 (vLLM), http://localhost:1234/v1 (LM Studio)
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
 
     # Reasoning specialist (VibeThinker — AIME-class maths / STEM / code). Used for
     # the *adaptive routing* path only: quantitative questions reason here, then qwen
@@ -215,6 +225,26 @@ class Settings(BaseSettings):
 
     # Per-claim confidence — synth model emits [Page]^0.NN markers; we parse + display
     query_per_claim_confidence: bool = True
+
+    # Semantic answer cache — short-circuit near-duplicate questions by embedding the
+    # question and matching it against recently-answered ones (cosine ≥ threshold),
+    # complementing the procedural store's EXACT pattern hash. Default OFF: serving a
+    # cached answer changes behaviour, so it is opt-in. A hit skips retrieval+synthesis
+    # entirely and returns the stored answer with `cached=True`.
+    query_answer_cache: bool = False
+    # NOTE: the right threshold is EMBEDDER-SPECIFIC — cosine scales differ per model.
+    # Measured on NVIDIA nv-embedqa-e5-v5 (2026-07): clear paraphrases score 0.86–0.93,
+    # unrelated questions ~0.20, so ~0.80 is a safe high-precision cut there. The 0.95
+    # default is deliberately conservative; lower it after measuring on your embedder.
+    answer_cache_sim_threshold: float = 0.95
+    answer_cache_ttl_days: int = 7
+    answer_cache_max_entries: int = 500
+    # Only answers at/above this confidence are cached (never cache a weak answer).
+    answer_cache_min_confidence: float = 0.60
+    # Staleness guard: before serving a cached answer, verify every page it cited still
+    # resolves (not archived/rejected/superseded). Makes the cache safe even with a
+    # loosely-tuned similarity threshold — a bad match re-answers, never serves stale.
+    answer_cache_verify_pages: bool = True
 
     # Phase B — Memory lifecycle (Ebbinghaus decay + reinforcement)
     lifecycle_enabled: bool = True

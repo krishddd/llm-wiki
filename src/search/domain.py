@@ -118,7 +118,7 @@ async def classify_domain_llm(client: OllamaClient, text: str) -> Domain:
         s = re.sub(r"\n?```$", "", s)
         m = re.search(r"\{.*\}", s, re.DOTALL)
         if m:
-            d = json.loads(m.group(0))
+            d = json.loads(m.group(0), strict=False)
             v = str(d.get("domain", "general")).strip().lower()
             if v in ("general", "math", "science", "economics", "engineering"):
                 return v  # type: ignore[return-value]

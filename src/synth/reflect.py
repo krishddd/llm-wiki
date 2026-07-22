@@ -51,7 +51,7 @@ def _extract(raw: str) -> dict:
     if not m:
         return {}
     try:
-        return json.loads(m.group(0))
+        return json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return {}
 

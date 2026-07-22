@@ -20,6 +20,6 @@ async def route(user_input: str, client: OllamaClient | None = None) -> dict:
     if not m:
         return {"action": "QUERY", "args": {"question": user_input}}
     try:
-        return json.loads(m.group(0))
+        return json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return {"action": "QUERY", "args": {"question": user_input}}

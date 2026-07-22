@@ -26,7 +26,7 @@ def _extract_json_array(s: str) -> list[str]:
     if not m:
         return []
     try:
-        data = json.loads(m.group(0))
+        data = json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return []
     arr = data.get("follow_ups") or []

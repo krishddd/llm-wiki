@@ -33,9 +33,8 @@ from .query import QueryEngine
 from .search.bm25_index import BM25Index
 from .search.dense_index import DenseIndex
 from .wiki.entity_pages import rebuild_entity_pages
-from .wiki.index_md import rebuild_index
 from .wiki.log_md import append_log
-from .wiki.pages import PageStore, page_id_from_path, read_page, write_page
+from .wiki.pages import PageStore, read_page, write_page
 
 log = logging.getLogger(__name__)
 
@@ -114,6 +113,12 @@ async def _startup() -> None:
     state.procedures = ProcedureStore(s.data_dir / "procedures.db")
     state.query_engine.procedures = state.procedures   # let QueryEngine record patterns
 
+    # Semantic answer cache (opt-in via `query_answer_cache`). Constructed regardless
+    # so toggling the flag at runtime works; the engine only consults it when enabled.
+    from .wiki.answer_cache import SemanticAnswerCache
+    state.answer_cache = SemanticAnswerCache(s.data_dir / "answer_cache.db")
+    state.query_engine.answer_cache = state.answer_cache
+
     # Phase D: in-process APScheduler for background upkeep jobs.
     if getattr(s, "scheduler_enabled", True):
         try:
@@ -141,6 +146,9 @@ async def _shutdown() -> None:
     if getattr(state, "procedures", None) is not None:
         with contextlib.suppress(Exception):
             state.procedures.close()
+    if getattr(state, "answer_cache", None) is not None:
+        with contextlib.suppress(Exception):
+            state.answer_cache.close()
     await close_client()
     state.graph.close()
 
@@ -463,21 +471,21 @@ async def accept_review(review_id: str) -> dict[str, Any]:
     src = s.wiki_dir / "review" / f"{review_id}.md"
     if not src.exists():
         raise HTTPException(404, f"no review page {review_id}")
-    dst = s.wiki_dir / "sources" / f"{review_id}.md"
     page = read_page(src)
-    page.path = dst
-    write_page(page)
-    src.unlink()
-    pid = page_id_from_path(dst, s.wiki_dir)
-    await state.bm25.upsert(pid, f"{page.frontmatter.get('title', review_id)}\n{page.body}")
-    await state.dense.upsert(pid, f"{page.frontmatter.get('title', review_id)}\n{page.body}")
-    rebuild_index(s.wiki_dir)
+    # Shared promotion: purge stale review-id units, re-index under the new
+    # sources/ id with full small-to-big chunking, and re-point graph rows.
+    from .wiki.review_promote import promote_review_page
+    pid = await promote_review_page(
+        page, wiki_dir=s.wiki_dir,
+        bm25=state.bm25, dense=state.dense, graph=state.graph,
+    )
+    dst = s.wiki_dir / "sources" / f"{review_id}.md"
     try:
         rebuild_entity_pages(state.graph, s.wiki_dir)
     except Exception as e:
         log.warning("entity-page rebuild failed", extra={"metadata": {"error": str(e)[:200]}})
     append_log(s.wiki_dir, "review-accept", review_id)
-    audit(log, "WIKI_REVIEW_ACCEPT", str(dst))
+    audit(log, "WIKI_REVIEW_ACCEPT", str(dst), page=pid)
     return {"ok": True, "page_path": str(dst).replace("\\", "/")}
 
 
@@ -487,10 +495,18 @@ async def reject_review(review_id: str) -> dict[str, Any]:
     src = s.wiki_dir / "review" / f"{review_id}.md"
     if not src.exists():
         raise HTTPException(404, f"no review page {review_id}")
-    src.unlink()
+    # Archive rather than hard-delete — rejection must stay reversible (same
+    # convention the Review Autopilot follows; nothing is ever deleted).
+    arch_dir = s.wiki_dir / "archive"
+    arch_dir.mkdir(parents=True, exist_ok=True)
+    dst = arch_dir / f"{review_id}.md"
+    page = read_page(src)
+    page.path = dst
+    write_page(page)
+    src.unlink(missing_ok=True)
     append_log(s.wiki_dir, "review-reject", review_id)
-    audit(log, "WIKI_REVIEW_REJECT", str(src))
-    return {"ok": True}
+    audit(log, "WIKI_REVIEW_REJECT", str(dst), by="human", mode="archived")
+    return {"ok": True, "archived_path": str(dst).replace("\\", "/")}
 
 
 @app.get("/wiki/index")
@@ -588,7 +604,7 @@ async def session_crystallize(body: CrystallizeBody) -> dict[str, Any]:
     parsed: dict = {}
     if m:
         try:
-            parsed = _json.loads(m.group(0))
+            parsed = _json.loads(m.group(0), strict=False)
         except _json.JSONDecodeError:
             parsed = {}
 

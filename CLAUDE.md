@@ -214,6 +214,7 @@ confidence: 0.87
 confidence_reason: "..."
 domain: general | math | science | economics | engineering   # stamped at ingest; drives adaptive routing
 chunk_strategy: dense | narrative | balanced | fixed          # agentic-ingestion chunk plan used
+chunk_count: 14              # sub-chunks indexed for this page — stamped at write so re-index / review-promotion can purge exactly (no residue, no 50-unit ceiling)
 tags: [concept, person, org]
 entity_refs: ["Entity A", "Entity B"]
 context_preamble: "..."     # Anthropic Contextual Retrieval — short doc context
@@ -235,6 +236,18 @@ borderline cases get a second judge vote from the reason role). ≥0.70 auto-acc
 (reversible — nothing is deleted), and the gray zone stays in review with an
 `auto_review` frontmatter annotation (scores + judge reasons) surfaced by
 `GET /review`. Pages whose source can't be re-read are always left for the human.
+Accepted pages also keep an `auto_review` block (`verdict: auto-accepted`) so the
+confidence provenance survives on the page.
+
+**Promotion (review → sources)** — both accept paths (autopilot and the human
+`POST /review/{id}/accept`) funnel through `wiki/review_promote.py::promote_review_page`:
+it deletes the stale `review/*` retrieval units, re-indexes the page under its new
+`sources/*` id via the SAME small-to-big chunker used at ingest (contextual preamble,
+dense metadata, Doc2Query `#hq`), and calls `KnowledgeGraph.reassign_page_id` to
+re-point facts/entities/relations/media from the old id to the new one — so a promoted
+page is a first-class retrieval citizen, not a monolithic blob with orphaned graph rows.
+Human `POST /review/{id}/reject` **archives** to `wiki/archive/` (reversible), never
+hard-deletes.
 
 **Bi-temporal facts** (separate from page confidence): every claim in the `facts`
 table carries `ingested_at`, optional `valid_from`, optional `valid_to`,
@@ -283,7 +296,12 @@ loop (plan → fanout → sufficient-context check → gap rewriter → repeat).
 Disable globally with `AGENTIC_ENABLED=false`. Both paths share the synthesis below.
 
 ```
-intent classifier (factual / multi_hop / synthesis / exhaustive)
+semantic answer cache (opt-in) — embed the question; on cosine ≥ threshold vs a  [QUERY_ANSWER_CACHE, default off]
+     recently-answered question, return the stored answer (cached=True), skipping
+     retrieval + synthesis. Complements the procedural store's EXACT pattern hash.
+     Staleness guard (ANSWER_CACHE_VERIFY_PAGES): a hit is rejected (re-answered) if
+     any page it cited no longer resolves — safe even with a loose threshold.
+  → intent classifier (factual / multi_hop / synthesis / exhaustive)
   → decompose (compound)
   → multi-query paraphrase (RAG-Fusion)
   → HyDE seed for dense
@@ -305,7 +323,9 @@ intent classifier (factual / multi_hop / synthesis / exhaustive)
        per-claim + overall confidence (catches "right page, wrong claim")
   → reflection critique → optional refinement
   → record_query_pattern() in procedural store      [v2 — Phase C4]
-  → save-back if conf ≥ 0.80 ∧ ≥ 2 cits
+  → save-back if conf ≥ 0.80 ∧ ≥ 2 cits  (runs AFTER NLI-lite verification recalibrates
+       confidence, so a page is never persisted with an inflated pre-verification score)
+  → populate semantic answer cache (grounded ∧ conf ≥ min)   [QUERY_ANSWER_CACHE]
   → episodic_log_entry
 ```
 

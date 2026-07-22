@@ -254,3 +254,62 @@ async def test_chat_completion_no_auth_header_when_keyless() -> None:
         out = await chat_completion(http, spec, "hi", None)
     assert out == "ok"
     assert captured["auth"] is None
+
+
+# ── NVIDIA build.nvidia.com provider ─────────────────────────────────────────
+
+def _nv_settings(**kw):
+    base = dict(
+        provider_summary="nvidia", provider_reason="nvidia", provider_fast="nvidia",
+        provider_solver="nvidia", provider_embed="nvidia", provider_vision="nvidia",
+        nvidia_base_url="https://integrate.api.nvidia.com/v1",
+        nvidia_api_key="nvapi-xxx",
+        nvidia_model="meta/llama-3.3-70b-instruct",
+        nvidia_embed_model="nvidia/nv-embedqa-e5-v5",
+        nvidia_vision_model="meta/llama-3.2-11b-vision-instruct",
+        nvidia_embed_input_type="query",
+    )
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+def test_nvidia_resolves_all_text_roles_to_one_model() -> None:
+    s = _nv_settings()
+    for role in ("summary", "reason", "fast", "solver"):
+        spec = resolve_chat_provider(s, role)
+        assert spec is not None and spec.name == "nvidia"
+        assert spec.model == "meta/llama-3.3-70b-instruct"
+        assert spec.base_url == "https://integrate.api.nvidia.com/v1"
+
+
+def test_nvidia_embed_spec_carries_input_type() -> None:
+    spec = resolve_embed_provider(_nv_settings())
+    assert spec is not None and spec.model == "nvidia/nv-embedqa-e5-v5"
+    assert spec.embed_extra == {"truncate": "END", "input_type": "query"}
+
+
+def test_nvidia_embed_input_type_omitted_when_blank() -> None:
+    spec = resolve_embed_provider(_nv_settings(nvidia_embed_input_type=""))
+    assert spec.embed_extra == {"truncate": "END"}
+
+
+def test_nvidia_missing_key_falls_back_to_ollama() -> None:
+    assert resolve_chat_provider(_nv_settings(nvidia_api_key=""), "reason") is None
+
+
+@pytest.mark.asyncio
+async def test_nvidia_embed_one_sends_input_type_in_body() -> None:
+    spec = resolve_embed_provider(_nv_settings())
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(json.loads(request.content))
+        return httpx.Response(200, json={"data": [{"embedding": [0.1, 0.2]}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        vec = await embed_one(http, spec, "docker notes")
+    assert vec == [0.1, 0.2]
+    assert captured["model"] == "nvidia/nv-embedqa-e5-v5"
+    assert captured["input"] == "docker notes"
+    assert captured["input_type"] == "query"
+    assert captured["truncate"] == "END"

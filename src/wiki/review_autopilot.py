@@ -43,8 +43,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ..logging_config import audit
-from .index_md import rebuild_index
-from .pages import Page, page_id_from_path, read_page, write_page
+from .pages import Page, read_page, write_page
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +101,7 @@ def _extract_json(s: str) -> dict | None:
     m = re.search(r"\{.*\}", s or "", re.DOTALL)
     if m:
         try:
-            return json.loads(m.group(0))
+            return json.loads(m.group(0), strict=False)
         except json.JSONDecodeError:
             pass
     # Salvage: small models sometimes truncate mid-"reasons", leaving invalid JSON.
@@ -208,30 +207,32 @@ def _near_boundary(score: float, accept_thr: float, reject_thr: float) -> bool:
     return abs(score - accept_thr) < _BOUNDARY_BAND or abs(score - reject_thr) < _BOUNDARY_BAND
 
 
-async def _accept(page: Page, wiki_dir: Path, bm25, dense, composite: float) -> str:
-    """Promote a staged page to sources/ and index it. Returns the new page-id."""
-    dst = Path(wiki_dir) / "sources" / page.path.name
-    fm = page.frontmatter
-    fm["confidence"] = round(composite, 2)
-    old_path = page.path
-    page.path = dst
-    write_page(page)
-    old_path.unlink(missing_ok=True)
-    pid = page_id_from_path(dst, Path(wiki_dir))
-    search_text = f"{fm.get('title', dst.stem)}\n{page.body}"
-    for index in (bm25, dense):
-        if index is None:
-            continue
-        try:
-            await index.upsert(pid, search_text)
-        except Exception as e:
-            log.warning("autopilot index upsert failed",
-                        extra={"metadata": {"page": pid, "error": str(e)[:160]}})
-    try:
-        rebuild_index(Path(wiki_dir))
-    except Exception as e:
-        log.debug("autopilot rebuild_index failed", extra={"metadata": {"error": str(e)[:120]}})
-    audit(log, "WIKI_REVIEW_ACCEPT", str(dst), by="auto", confidence=round(composite, 2))
+async def _accept(
+    page: Page, wiki_dir: Path, bm25, dense, composite: float,
+    judge: dict, grounding: float | None, graph=None,
+) -> str:
+    """Promote a staged page to sources/ via the shared promotion helper.
+
+    Records the verdict as an `auto_review` block on the accepted page too (not just
+    the gray-zone ones) so the confidence provenance survives on the page itself.
+    Returns the new page-id.
+    """
+    page.frontmatter["auto_review"] = {
+        "composite": round(composite, 2),
+        "faithfulness": round(judge["faithfulness"], 2),
+        "coverage": round(judge["coverage"], 2),
+        "entity_grounding": round(grounding, 2) if grounding is not None else None,
+        "reasons": judge.get("reasons") or [],
+        "verdict": "auto-accepted",
+        "date": datetime.now(UTC).date().isoformat(),
+    }
+    from .review_promote import promote_review_page
+    pid = await promote_review_page(
+        page, wiki_dir=Path(wiki_dir), bm25=bm25, dense=dense, graph=graph,
+        new_confidence=composite,
+    )
+    audit(log, "WIKI_REVIEW_ACCEPT", str(Path(wiki_dir) / "sources" / page.path.name),
+          by="auto", confidence=round(composite, 2))
     return pid
 
 
@@ -269,6 +270,7 @@ async def autopilot_review(
     client,
     bm25=None,
     dense=None,
+    graph=None,
     settings=None,
     only_page: str | None = None,
     max_pages: int | None = None,
@@ -331,7 +333,7 @@ async def autopilot_review(
                 composite = _composite(judge, grounding)
 
         if composite >= accept_thr:
-            pid = await _accept(page, wiki_dir, bm25, dense, composite)
+            pid = await _accept(page, wiki_dir, bm25, dense, composite, judge, grounding, graph=graph)
             report.accepted += 1
             report.outcomes.append(AutoReviewOutcome(
                 page=p.name, action="accepted", composite=round(composite, 3),

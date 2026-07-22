@@ -7,6 +7,7 @@ that would otherwise trigger the llama3.2 fallback falsely.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import re
@@ -108,7 +109,7 @@ def _extract_json(s: str) -> dict | None:
     if not m:
         return None
     try:
-        return json.loads(m.group(0))
+        return json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return None
 
@@ -535,71 +536,25 @@ class Ingestor:
 
     async def _index_doc2query(self, pid: str, title: str, questions: list[str]) -> None:
         """Index the hypothetical questions as their own retrieval unit `<pid>#hq`."""
-        if not questions:
-            return
-        hq_text = f"{title}\n" + "\n".join(questions)
-        hq_id = f"{pid}#hq"
-        if self.bm25:
-            try:
-                await self.bm25.upsert(hq_id, hq_text)
-            except Exception as e:
-                log.debug("doc2query BM25 upsert failed", extra={"metadata": {"error": str(e)[:120]}})
-        if self.dense:
-            try:
-                await self.dense.upsert(
-                    hq_id, hq_text,
-                    meta={"title": title, "parent_id": pid, "hq": True},
-                )
-            except Exception as e:
-                log.debug("doc2query dense upsert failed", extra={"metadata": {"error": str(e)[:120]}})
+        from .wiki.reindex import index_doc2query
+        await index_doc2query(self.bm25, self.dense, pid, title, questions)
 
-    async def _index_page_chunks(self, pid: str, title: str, body: str, frontmatter: dict) -> None:
-        """Helper to index a page at hierarchical chunk level in BM25 and Chroma."""
-        # 1) Clean up any old parent-page or sub-chunk entries to avoid stale chunk residue
-        if self.bm25:
-            try:
-                await self.bm25.delete(pid)
-                await self.bm25.delete(f"{pid}#hq")
-                for idx in range(50):
-                    await self.bm25.delete(f"{pid}#{idx}")
-            except Exception:
-                pass
-        if self.dense:
-            try:
-                await self.dense.delete(pid)
-                await self.dense.delete(f"{pid}#hq")
-                for idx in range(50):
-                    await self.dense.delete(f"{pid}#{idx}")
-            except Exception:
-                pass
+    async def _index_page_chunks(self, pid: str, title: str, body: str, frontmatter: dict) -> int:
+        """Index a page at hierarchical chunk level in BM25 and Chroma.
 
-        # 2) Index the sub-chunks of the entire page body
-        text_to_index = f"{title}\n{body}"
-        if frontmatter.get("context_preamble"):
-            from .search.contextual import merge_context_with_chunk
-            text_to_index = merge_context_with_chunk(frontmatter["context_preamble"], text_to_index)
-
-        sub_chunks = _chunk_text(text_to_index, target_chars=SUB_CHUNK_TARGET, overlap=SUB_CHUNK_OVERLAP)
-        for idx, ch in enumerate(sub_chunks):
-            chunk_id = f"{pid}#{idx}"
-            if self.bm25:
-                try:
-                    await self.bm25.upsert(chunk_id, ch)
-                except Exception as e:
-                    log.warning("BM25 chunk upsert failed", extra={"metadata": {"error": str(e)[:160]}})
-            if self.dense:
-                try:
-                    await self.dense.upsert(
-                        chunk_id, ch,
-                        meta={
-                            "title": title,
-                            "confidence": frontmatter.get("confidence", 0.6),
-                            "parent_id": pid,
-                            "domain": frontmatter.get("domain", "general"),
-                        }
-                    )
-                except Exception as e:
-                    log.warning("Dense chunk upsert failed", extra={"metadata": {"error": str(e)[:160]}})
+        Delegates to the shared `wiki.reindex` primitives so ingest and the
+        review-promotion path index pages identically. Returns the chunk count.
+        """
+        from .wiki.reindex import delete_page_index, index_page_chunks
+        # 1) Clean up any old units first. Use the stored count when present so a
+        # re-ingest of a document with >50 sub-chunks leaves no residue.
+        await delete_page_index(
+            self.bm25, self.dense, pid,
+            chunk_count=frontmatter.get("chunk_count"),
+            media_count=frontmatter.get("media_count"),
+        )
+        # 2) Index the sub-chunks of the entire page body.
+        return await index_page_chunks(self.bm25, self.dense, pid, title, body, frontmatter)
 
     # Display-math and inline-math spans → first-class formula media nodes.
     _FORMULA_SPAN_RE = re.compile(r"\$\$.+?\$\$|\$[^$\n]{2,}?\$|\\\[.+?\\\]", re.DOTALL)
@@ -613,6 +568,17 @@ class Ingestor:
         Best-effort and idempotent — clears the page's existing media nodes first so a
         re-ingest replaces rather than duplicates.
         """
+        # Delete the previous run's media embeddings from the dense index BEFORE the
+        # graph rows are cleared — otherwise re-ingesting a page accumulates orphan
+        # `#media#<n>` vectors (the graph rows were the only record of their ids).
+        try:
+            for m in await self.graph.media_for_page(pid):
+                emb_id = m.get("embedding_id")
+                if emb_id and self.dense:
+                    with contextlib.suppress(Exception):
+                        await self.dense.delete(emb_id)
+        except Exception as e:
+            log.debug("media embedding cleanup failed", extra={"metadata": {"error": str(e)[:120]}})
         try:
             await self.graph.delete_media_for_page(pid)
         except Exception as e:
@@ -907,6 +873,18 @@ class Ingestor:
             except Exception as e:
                 log.debug("contextual preamble failed", extra={"metadata": {"error": str(e)[:120]}})
 
+        # Stamp the sub-chunk count into frontmatter BEFORE the write — deterministic
+        # from the same text `_index_page_chunks` will index — so a later re-index or
+        # review-promotion can delete exactly this many `#<n>` units (no residue, no
+        # 50-unit ceiling). Mirrors the merge done at index time.
+        _chunk_src = f"{title}\n{body}"
+        if frontmatter.get("context_preamble"):
+            from .search.contextual import merge_context_with_chunk
+            _chunk_src = merge_context_with_chunk(frontmatter["context_preamble"], _chunk_src)
+        frontmatter["chunk_count"] = len(
+            _chunk_text(_chunk_src, target_chars=SUB_CHUNK_TARGET, overlap=SUB_CHUNK_OVERLAP)
+        )
+
         page_path, is_live = stage_or_publish(title, body, frontmatter, settings=self.s)
         pid = page_id_from_path(page_path, self.s.wiki_dir)
 
@@ -1080,7 +1058,7 @@ class Ingestor:
                 from .wiki.review_autopilot import autopilot_review
                 ar = await autopilot_review(
                     wiki_dir=self.s.wiki_dir, client=self.c,
-                    bm25=self.bm25, dense=self.dense, settings=self.s,
+                    bm25=self.bm25, dense=self.dense, graph=self.graph, settings=self.s,
                     only_page=Path(page_path).name,
                 )
                 outcome = (ar.get("outcomes") or [{}])[0]

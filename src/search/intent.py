@@ -93,7 +93,7 @@ async def classify_intent_llm(client: OllamaClient, question: str) -> Intent:
         s = re.sub(r"\n?```$", "", s)
         m = re.search(r"\{.*\}", s, re.DOTALL)
         if m:
-            d = json.loads(m.group(0))
+            d = json.loads(m.group(0), strict=False)
             v = str(d.get("intent", "synthesis")).strip().lower()
             if v in ("factual", "multi_hop", "synthesis", "exhaustive"):
                 return v  # type: ignore[return-value]

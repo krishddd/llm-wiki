@@ -139,7 +139,7 @@ async def plan_ingest_llm(client, elements, base_plan: IngestPlan) -> IngestPlan
         m = re.search(r"\{.*\}", s, re.DOTALL)
         if not m:
             return base_plan
-        d = json.loads(m.group(0))
+        d = json.loads(m.group(0), strict=False)
         target = _clamp(int(d.get("target_chars", base_plan.target_chars)), _MIN_TARGET, _MAX_TARGET)
         overlap = _clamp(int(d.get("overlap_chars", base_plan.overlap_chars)), _MIN_OVERLAP, _MAX_OVERLAP)
         strategy = str(d.get("strategy", base_plan.strategy)).strip().lower()

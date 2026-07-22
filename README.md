@@ -49,7 +49,9 @@ flowchart LR
 
     subgraph QRY["Query pipeline"]
         direction TB
-        ORCH["Agentic orchestrator"] --> RET["Hybrid retrieval<br/>RRF · rerank · small-to-big · MMR"]
+        CACHE{"Semantic answer cache<br/>cosine ≥ 0.95? (opt-in)"}
+        CACHE -- "miss" --> ORCH["Agentic orchestrator"]
+        ORCH --> RET["Hybrid retrieval<br/>RRF · rerank · small-to-big · MMR"]
         RET --> SYNTH["Synthesis + citations<br/>+ NLI claim verification"]
     end
 
@@ -59,8 +61,10 @@ flowchart LR
     OKFIN --> WIKI
     ING --> STORE
     STORE --> QRY
-    QRY --> ANS["Cited answer"]
-    ANS -- "save-back if conf ≥ 0.80" --> WIKI
+    CACHE -- "hit" --> ANS["Cited answer"]
+    SYNTH --> ANS
+    ANS -- "save-back if conf ≥ 0.80<br/>(after NLI verification)" --> WIKI
+    ANS -. "cache confident answers" .-> CACHE
     SCHED --> STORE
     WIKI -- "export" --> OKFOUT["Shareable OKF bundle"]
 ```
@@ -197,10 +201,26 @@ flowchart TD
     BORDER -- yes --> SECOND["Second judge vote<br/>(reason role) → average"]
     BORDER -- no --> DECIDE{"composite"}
     SECOND --> DECIDE
-    DECIDE -- "≥ 0.70" --> ACCEPT["Auto-accept<br/>→ sources/, indexed, live"]
+    DECIDE -- "≥ 0.70" --> PROMOTE
     DECIDE -- "≤ 0.30" --> ARCHIVE["Auto-archive<br/>→ wiki/archive/ (reversible)"]
     DECIDE -- "0.30–0.70" --> ANNOTATE["Stay in review<br/>annotated with scores + reasons"]
+    HUMAN -- "accept" --> PROMOTE
+    HUMAN -- "reject" --> ARCHIVE
+
+    subgraph PROM["promote_review_page (shared)"]
+        direction TB
+        PROMOTE["Move review/ → sources/"] --> PURGE["Purge stale review-id units<br/>parent · #hq · #n · #media"]
+        PURGE --> REIDX["Re-index under new id<br/>small-to-big + preamble + Doc2Query"]
+        REIDX --> REASSIGN["reassign_page_id in graph<br/>facts · entities · relations · media"]
+    end
 ```
+
+Both accept paths — the Autopilot and the human `POST /review/{id}/accept` — funnel
+through the shared **`promote_review_page`** helper, so a promoted page is indexed
+exactly like a freshly-ingested one (small-to-big sub-chunks, contextual preamble,
+Doc2Query `#hq`, dense metadata) and its knowledge-graph rows follow it to the new id
+instead of dangling at the old `review/*` path. Rejection **archives** (reversible),
+never hard-deletes.
 
 1. an LLM judge re-reads the staged page **against the original source document**
    and scores faithfulness + coverage (evidence-grounded, not self-assessed);
@@ -227,9 +247,30 @@ dashboard at `/dashboard`.
 
 ## The query pipeline
 
+```mermaid
+flowchart TD
+    Q["User question"] --> CACHE{"Semantic answer cache<br/>(opt-in) — cosine ≥ threshold?"}
+    CACHE -- "hit" --> DONE["Return stored answer<br/>cached=true"]
+    CACHE -- "miss" --> PROC{"Crystallized<br/>procedure match?"}
+    PROC -- "yes" --> ANCHOR["Recall anchor pages directly"]
+    PROC -- "no" --> RET["Decompose · multi-query · HyDE<br/>→ hybrid retrieval → CRAG filter"]
+    ANCHOR --> SYNTH
+    RET --> SYNTH["Adaptive routing → synthesis<br/>numbered citations + per-claim conf"]
+    SYNTH --> VERIFY["Grounding check · CRAG ceiling<br/>NLI-lite claim verification (recalibrates conf)"]
+    VERIFY --> SAVE{"conf ≥ 0.80 ∧ ≥ 2 cits?<br/>(evaluated AFTER verification)"}
+    SAVE -- "yes" --> BACK["Save-back → wiki/sources/"]
+    SAVE -- "no" --> OUT
+    BACK --> OUT["Cited answer + episodic log<br/>+ populate answer cache"]
+```
+
+The linear detail:
+
 ```
 user question
    │
+   ▼
+semantic answer cache (opt-in)    ← embed Q; cosine ≥ threshold vs recent answers → return cached
+   │                                (complements the EXACT-hash procedural recall)
    ▼
 intent classifier                 ← factual / multi_hop / synthesis / exhaustive
    │
@@ -285,7 +326,10 @@ reflection critique → optional refinement
 record_query_pattern() in procedural store
    │
    ▼
-save-back if confidence ≥ 0.80 ∧ citations ≥ 2
+save-back if confidence ≥ 0.80 ∧ citations ≥ 2   ← evaluated AFTER NLI verification, so a
+   │                                               page is never persisted with an inflated score
+   ▼
+populate semantic answer cache (grounded ∧ conf ≥ min)   [QUERY_ANSWER_CACHE, off by default]
    │
    ▼
 episodic_log_entry
@@ -308,6 +352,7 @@ isn't installed.
 | **Privacy redaction** | Strips API keys, JWTs, private keys, and passwords from raw sources before ingest; audit-logged as `PRIVACY_REDACT`. | `INGEST_REDACT_SECRETS` (on) |
 | **STEM embeddings** | A stronger, notation-aware embedder (`bge-m3`) in a separate dense collection for quantitative content; routed by domain. | `EMBED_STEM_ENABLED` (off) |
 | **Multimodal graph** | Tables/images/code/formulas become first-class graph nodes linked to entities and embedded as their own units; retrieval surfaces media linked to the entities in play. | `GRAPH_MULTIMODAL_NODES` (off) |
+| **Semantic answer cache** | Embeds each question and short-circuits near-duplicates (cosine ≥ threshold) with a stored answer — a fuzzy layer above the procedural store's EXACT pattern hash. Only grounded, confident answers are cached; entries carry a TTL + count cap. A **staleness guard** re-answers instead of serving a hit whose cited pages have since been archived/rejected/superseded, so a loosely-tuned threshold can never surface an answer built on pages that are gone. | `QUERY_ANSWER_CACHE` (off) |
 
 See [`CLAUDE.md`](./CLAUDE.md) for the schema details and
 [`docs/design/multimodal-graph.md`](./docs/design/multimodal-graph.md) for the
@@ -353,6 +398,61 @@ Retrieval eval needs only the embedding model (cheap; run per ablation).
 Answer eval runs the full pipeline per question. Results land in
 `eval/results-<label>.json`. Hand-edit `eval/golden.jsonl` freely — an
 LLM-generated golden set inherits its generator's blind spots.
+
+---
+
+## Validation — tested end-to-end on hosted models
+
+The pipeline was exercised end-to-end against **NVIDIA `build.nvidia.com`** hosted
+models (fully local-GPU-free), routed through the provider fleet — text via
+`meta/llama-3.1-8b-instruct`, embeddings via `nvidia/nv-embedqa-e5-v5` (1024-dim).
+Every stage ran through a real model, not a mock.
+
+**What was tested and the numbers that came back:**
+
+| Stage tested | Result |
+|---|---|
+| Provider connectivity (chat + embed) | chat ≈ 0.8 s/call · embed ≈ 0.3 s/call · `/models` auth ✓ |
+| Ingest — 3 docs (RAG, vector DBs, Transformers) | all went **live** at **confidence 0.95**; entities + relations + Doc2Query extracted |
+| Query retrieval | correct source page retrieved for **every** question |
+| Synthesis factual accuracy | facts correct (RAG → Patrick Lewis / Facebook AI / 2020; Transformer → Vaswani / Google / 2017; FAISS/HNSW for vector DBs) |
+| Eval harness — recall@5 / MRR / hit-rate | **1.000 / 1.000 / 1.000** across baseline + 4 ablations (chunk-context, MMR, down-weight, graph); ≈ 3–5 s/variant |
+| Answer-cache precision @ threshold 0.80 | paraphrase → **cache hit**, unrelated question → **miss** (correct both ways) |
+| Unit + integration suite | **145 passed**, ruff-clean |
+
+**Answer-cache threshold, calibrated on real `nv-embedqa` cosines** (replacing the
+conservative 0.95 guess — cosine scale is embedder-specific):
+
+| Question pair | Cosine |
+|---|---|
+| "What is RAG and who introduced it?" ~ "Who created RAG and what is it?" | **0.928** |
+| "What are the two components of RAG?" ~ "What are RAG's main parts?" | **0.857** |
+| loose reformulation (hallucination wording) | 0.589 |
+| RAG question **vs** "How do transformers use attention?" | 0.201 |
+| RAG question **vs** "capital of France?" / "quicksort complexity?" | ≈ 0.19–0.20 |
+
+Paraphrases cluster at **0.86–0.93**, unrelated questions at **≈ 0.20** — a wide safe
+gap, so **`ANSWER_CACHE_SIM_THRESHOLD ≈ 0.80`** is a high-precision cut for this
+embedder (validated live: it hit paraphrases and rejected unrelated questions).
+
+**Honest caveats (what these numbers do and don't prove):**
+- The eval corpus was **3 very distinct docs**, so retrieval is trivial and every
+  ablation scores a perfect 1.000 — this proves the harness is **push-button and
+  correct**, not that any single technique lifts recall. Differentiating the
+  techniques needs a larger, more *confusable* corpus.
+- `meta/llama-3.1-8b-instruct` is fast but doesn't reliably emit the `[Title]^0.NN`
+  citation markers, so `grounded` is penalized (the answer *content* is still
+  correct). For production-grade citation/grounding, use a larger reasoner
+  (`meta/llama-3.3-70b-instruct` or a `qwen` tier) at the cost of latency.
+- Live testing also surfaced a real robustness fix: hosted models emit JSON with
+  **literal newlines inside strings** (from `##` markdown), which strict `json.loads`
+  rejected — hardened to `strict=False` across all 20 LLM-output parse sites, which
+  lifted a query answer from an unparsed blob (confidence 0.2) to clean markdown
+  (confidence 0.75). This is exactly the class of bug that only appears under a real
+  model.
+
+Reproduce with the NVIDIA block in `.env.example` (`PROVIDER_*=nvidia` + `NVIDIA_API_KEY`),
+then the ingest / query / eval commands above.
 
 ---
 
@@ -557,7 +657,9 @@ src/
 └── wiki/                  Page store (OKF stamping), episodic, promote, procedures,
                            reconciler, lifecycle, contradiction_resolver,
                            entity_pages, topics (RAPTOR-lite), index_md, log_md,
-                           okf_export
+                           okf_export, review_autopilot, review_promote (shared
+                           review→sources promotion), reindex (shared indexing
+                           primitives), answer_cache (semantic answer cache)
 
 scripts/
 ├── migrate_okf.py         Re-stamp pre-OKF pages (idempotent)
@@ -582,6 +684,7 @@ wiki/
 data/
 ├── graph.db               SQLite: entities, relations, facts, page_access
 ├── procedures.db          SQLite: recurring query patterns
+├── answer_cache.db        SQLite: semantic answer cache (opt-in)
 ├── bm25.pkl               BM25 index
 └── chroma/                ChromaDB persistence (or numpy fallback)
 
@@ -611,9 +714,12 @@ ingested: 2026-05-01
 confidence: 0.87
 confidence_reason: "..."
 domain: general | math | science | economics | engineering
+chunk_count: 14             # sub-chunks indexed — lets re-index / promotion purge exactly
 tags: [concept, person, org]
 entity_refs: ["Entity A", "Entity B"]
 hypothetical_questions: ["What does …?"]  # Doc2Query, indexed as <pid>#hq
+auto_review:                # stamped by Review Autopilot (accepted / annotated pages)
+  {composite: 0.82, verdict: auto-accepted, faithfulness: 0.9, coverage: 0.8}
 context_preamble: "..."     # Anthropic Contextual Retrieval
 has_tables: true
 has_images: false

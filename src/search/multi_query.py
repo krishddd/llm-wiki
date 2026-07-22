@@ -31,7 +31,7 @@ def _extract(raw: str) -> list[str]:
     if not m:
         return []
     try:
-        d = json.loads(m.group(0))
+        d = json.loads(m.group(0), strict=False)
     except json.JSONDecodeError:
         return []
     qs = [str(q).strip() for q in (d.get("queries") or []) if str(q).strip()]

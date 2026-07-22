@@ -28,11 +28,12 @@ class FakeOllama:
             self._live -= 1
 
     async def list_models(self) -> list[str]:
+        # Mirror the default 4-model stack in config.required_models() so /health
+        # reports models_missing == [] under the fake client.
         return [
             "nomic-embed-text:latest",
             "qwen3:14b",
-            "gemma3:e4b",
-            "llama3.2:latest",
+            "gemma4:e4b",
             "llava:7b",
         ]
 
