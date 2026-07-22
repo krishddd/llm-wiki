@@ -121,3 +121,37 @@ def test_review_accept_missing_404(client):
 
 def test_review_reject_missing_404(client):
     assert client.post("/review/does-not-exist/reject").status_code == 404
+
+
+def test_profile_endpoint_returns_contract(client):
+    r = client.get("/profile")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enforcement"] in ("off", "warn", "strict")
+    assert "source" in body["profile"]["page_kinds"]
+    assert "PERSON" in body["profile"]["entity_types"]
+
+
+def test_profile_validate_empty_corpus(client):
+    r = client.post("/admin/profile/validate")
+    assert r.status_code == 200
+    assert r.json()["checked"] == 0            # isolated tmp wiki has no source pages
+
+
+def test_feedback_noise_is_dropped(client):
+    r = client.post("/feedback", json={"question": "q", "text": "thanks!"})
+    assert r.status_code == 200
+    assert r.json()["stored"] is False and r.json()["kind"] == "noise"
+
+
+def test_feedback_empty_text_400(client):
+    assert client.post("/feedback", json={"text": "   "}).status_code == 400
+
+
+def test_feedback_list_empty(client):
+    r = client.get("/feedback")
+    assert r.status_code == 200 and r.json()["count"] == 0
+
+
+def test_feedback_dismiss_missing_404(client):
+    assert client.post("/feedback/99999/dismiss").status_code == 404

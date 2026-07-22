@@ -68,6 +68,8 @@ class _State:
     ingestor: Ingestor
     query_engine: QueryEngine
     procedures: Any | None = None
+    answer_cache: Any | None = None
+    feedback: Any | None = None
     scheduler: Any | None = None
 
 
@@ -119,6 +121,11 @@ async def _startup() -> None:
     state.answer_cache = SemanticAnswerCache(s.data_dir / "answer_cache.db")
     state.query_engine.answer_cache = state.answer_cache
 
+    # Feedback curator — capture user corrections/preferences/approvals as memory.
+    from .wiki.feedback import FeedbackStore
+    state.feedback = FeedbackStore(s.data_dir / "feedback.db")
+    state.query_engine.feedback = state.feedback   # lets synthesis inject preferences
+
     # Phase D: in-process APScheduler for background upkeep jobs.
     if getattr(s, "scheduler_enabled", True):
         try:
@@ -149,6 +156,9 @@ async def _shutdown() -> None:
     if getattr(state, "answer_cache", None) is not None:
         with contextlib.suppress(Exception):
             state.answer_cache.close()
+    if getattr(state, "feedback", None) is not None:
+        with contextlib.suppress(Exception):
+            state.feedback.close()
     await close_client()
     state.graph.close()
 
@@ -515,6 +525,117 @@ async def wiki_index() -> dict[str, str]:
     idx = s.wiki_dir / "index.md"
     text = idx.read_text(encoding="utf-8") if idx.exists() else ""
     return {"content": text}
+
+
+@app.get("/profile")
+async def get_profile() -> dict[str, Any]:
+    """The active runtime-enforced page/schema contract + enforcement mode."""
+    s = get_settings()
+    from .wiki.profile import load_profile
+    prof = load_profile(getattr(s, "profile_path", "") or None)
+    return {
+        "enforcement": getattr(s, "profile_enforcement", "warn"),
+        "source": getattr(s, "profile_path", "") or "built-in default",
+        "profile": prof.as_dict(),
+    }
+
+
+@app.post("/admin/profile/validate")
+async def validate_corpus() -> dict[str, Any]:
+    """Validate every live page against the contract. Read-only audit — reports
+    violations without rewriting anything (use to gauge drift or vet an ingest run)."""
+    s = get_settings()
+    from .wiki.pages import read_page
+    from .wiki.profile import load_profile, validate_page
+    prof = load_profile(getattr(s, "profile_path", "") or None)
+    violations: list[dict[str, Any]] = []
+    checked = 0
+    for sub in ("sources", "entities", "procedures"):
+        d = s.wiki_dir / sub
+        if not d.exists():
+            continue
+        for p in sorted(d.glob("*.md")):
+            if p.name.lower() in ("index.md", "log.md"):
+                continue
+            try:
+                page = read_page(p)
+            except Exception:
+                continue
+            checked += 1
+            res = validate_page(page.frontmatter, profile=prof)
+            if res.errors or res.warnings:
+                violations.append({
+                    "page": f"{sub}/{p.name}",
+                    "errors": res.errors,
+                    "warnings": res.warnings,
+                })
+    return {"checked": checked, "invalid": sum(1 for v in violations if v["errors"]),
+            "with_warnings": len(violations), "violations": violations}
+
+
+# ── Feedback curator ─────────────────────────────────────────────────────────
+
+class FeedbackIn(BaseModel):
+    question: str = ""
+    answer: str = ""
+    answer_ref: str = ""
+    text: str
+
+
+@app.post("/feedback")
+async def submit_feedback(body: FeedbackIn) -> dict[str, Any]:
+    """Submit user feedback on an answer. It is classified; generic acks are dropped,
+    high-signal corrections/preferences are stored as candidates (auto-promoted iff
+    FEEDBACK_AUTO_PROMOTE)."""
+    s = get_settings()
+    if not getattr(s, "feedback_enabled", True) or getattr(state, "feedback", None) is None:
+        raise HTTPException(503, "feedback capture is disabled")
+    if not body.text.strip():
+        raise HTTPException(400, "empty feedback text")
+    from .wiki.feedback import record_feedback
+    promote_ctx = {"wiki_dir": s.wiki_dir, "bm25": state.bm25, "dense": state.dense, "graph": state.graph}
+    return await record_feedback(
+        state.feedback, get_client(),
+        question=body.question, answer=body.answer, answer_ref=body.answer_ref, text=body.text,
+        auto_promote=getattr(s, "feedback_auto_promote", False), promote_ctx=promote_ctx,
+    )
+
+
+@app.get("/feedback")
+async def list_feedback(status: str = "candidate") -> dict[str, Any]:
+    """List feedback records (default: candidates awaiting promotion)."""
+    if getattr(state, "feedback", None) is None:
+        return {"count": 0, "items": []}
+    items = [r.as_dict() for r in state.feedback.list(status=status or None)]
+    return {"count": len(items), "status": status, "items": items}
+
+
+@app.post("/feedback/{fid}/promote")
+async def promote_feedback_endpoint(fid: int) -> dict[str, Any]:
+    """Promote a candidate into durable memory (curated page / active preference / reinforcement)."""
+    s = get_settings()
+    if getattr(state, "feedback", None) is None:
+        raise HTTPException(503, "feedback capture is disabled")
+    from .wiki.feedback import promote_feedback
+    res = await promote_feedback(
+        state.feedback, fid,
+        wiki_dir=s.wiki_dir, bm25=state.bm25, dense=state.dense, graph=state.graph,
+    )
+    if not res.get("ok"):
+        raise HTTPException(404, res.get("error", "not found"))
+    return res
+
+
+@app.post("/feedback/{fid}/dismiss")
+async def dismiss_feedback(fid: int) -> dict[str, Any]:
+    """Set a candidate aside without applying it."""
+    if getattr(state, "feedback", None) is None:
+        raise HTTPException(503, "feedback capture is disabled")
+    rec = state.feedback.get(fid)
+    if rec is None:
+        raise HTTPException(404, f"no feedback {fid}")
+    state.feedback.set_status(fid, "dismissed")
+    return {"ok": True, "id": fid, "status": "dismissed"}
 
 
 @app.get("/facts/{entity_name}")

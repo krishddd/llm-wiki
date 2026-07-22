@@ -360,6 +360,48 @@ multimodal-graph rollout.
 
 ---
 
+## Governance & learning
+
+Two capabilities keep the corpus *correct* and let it *learn* — the wiki isn't just
+retrieved from, it's governed and improved over time.
+
+### Profile / schema contract (runtime-enforced)
+
+The wiki's conventions — allowed `kind`s, required frontmatter, valid `domain`/type
+values, confidence bounds, the entity/relation vocabularies — are a **declarative
+contract validated at the page write surface**, not just prose in `CLAUDE.md`. A
+malformed page is caught deterministically instead of drifting in.
+
+- **Modes** (`PROFILE_ENFORCEMENT`): `off` · `warn` (default — logs + audits, still
+  writes) · `strict` (raises `ProfileViolation` so ingest routes the page to review).
+- The built-in `DEFAULT_PROFILE` matches the current schema exactly (nothing the
+  pipeline already produces is rejected); override any subset of keys with a
+  `PROFILE_PATH` JSON file.
+- `GET /profile` shows the active contract; `POST /admin/profile/validate` audits the
+  whole live corpus for drift without rewriting anything.
+
+### Feedback curator (corrections → memory)
+
+The episodic tier logs what *happened*; the feedback curator captures what the user
+*corrected or preferred* and turns it into durable memory. Submit feedback on an
+answer via `POST /feedback`; it is classified (a cheap heuristic drops generic acks
+like "thanks" with no LLM call, else one reason-role call):
+
+| Kind | On promotion |
+|---|---|
+| **correction** | writes a curated high-confidence `sources/feedback-*.md` page, indexed like any source |
+| **preference** | becomes an **active preference** injected into every future synthesis prompt ("honour these") |
+| **approval** | reinforces the cited page's lifecycle access counter |
+| **rejection** | recorded and flagged for review |
+| **noise** | dropped |
+
+Promotion is explicit by default (`GET /feedback` → `POST /feedback/{id}/promote` or
+`/dismiss`); set `FEEDBACK_AUTO_PROMOTE=true` to auto-apply high-signal
+corrections/preferences at capture time. Validated live against hosted models — all
+five categories classified correctly, actionable content extracted cleanly.
+
+---
+
 ## Best-of-best RAG package (v5)
 
 Six further techniques, each flag-gated and on by default:

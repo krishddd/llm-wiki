@@ -227,6 +227,20 @@ correlation_ids: [COR-...]   # only on crystallized / promoted
 ---
 ```
 
+**Profile / schema contract** (`wiki/profile.py`, `PROFILE_ENFORCEMENT` = off|warn|strict,
+default warn): `write_page` validates frontmatter against a declarative contract
+(allowed `kind`s/`domain`s, required fields, confidence bounds, entity/relation
+vocabularies) — `warn` logs + audits `PROFILE_VIOLATION`, `strict` raises. The built-in
+`DEFAULT_PROFILE` matches this schema; `PROFILE_PATH` overrides any subset. `GET /profile`
+shows it; `POST /admin/profile/validate` audits the live corpus.
+
+**Feedback curator** (`wiki/feedback.py`, `data/feedback.db`, `FEEDBACK_ENABLED`): captures
+high-signal user feedback (`POST /feedback`) — a heuristic drops generic acks, else the
+reason role classifies into correction/preference/approval/rejection. Promotion
+(`POST /feedback/{id}/promote`, or `FEEDBACK_AUTO_PROMOTE`) applies it: **correction** →
+curated `sources/feedback-*.md` page (indexed); **preference** → active preference injected
+into synthesis prompts (`feedback_inject_preferences`); **approval** → page reinforcement.
+
 **Confidence gate**: `>= confidence_threshold` (default 0.60) → `wiki/sources/`, else `wiki/review/`.
 Staged pages then pass through the **Review Autopilot** (`wiki/review_autopilot.py`):
 an evidence-grounded judge compares the page against its original source, blended
