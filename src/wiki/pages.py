@@ -106,8 +106,42 @@ def write_page(page: Page) -> None:
             if desc:
                 page.frontmatter["description"] = desc
         page.frontmatter["timestamp"] = datetime.now(UTC).isoformat(timespec="seconds")
+        # Profile / schema contract — enforce AFTER stamping (so auto-filled fields
+        # count as present). "warn" logs + audits; "strict" raises ProfileViolation.
+        _enforce_profile(page)
     page.path.parent.mkdir(parents=True, exist_ok=True)
     page.path.write_text(page.render(), encoding="utf-8")
+
+
+def _enforce_profile(page: Page) -> None:
+    """Validate the page against the active profile contract. Best-effort loading —
+    only the enforcement itself (strict mode) is allowed to raise."""
+    try:
+        s = get_settings()
+        mode = getattr(s, "profile_enforcement", "warn")
+        if (mode or "warn").lower() == "off":
+            return
+        from .profile import enforce, load_profile
+        profile = load_profile(getattr(s, "profile_path", "") or None)
+    except Exception:
+        return  # never let profile *loading* break a write
+    from .profile import ProfileViolation
+    try:
+        result = enforce(page.path.name, page.frontmatter, profile=profile, mode=mode)
+    except ProfileViolation:
+        audit(log, "PROFILE_VIOLATION", str(page.path), mode="strict",
+              errors="; ".join(_pv_errors_from(page, profile)))
+        raise
+    if not result.ok:
+        audit(log, "PROFILE_VIOLATION", str(page.path), mode="warn",
+              errors="; ".join(result.errors))
+        log.warning("profile contract violation (warn)",
+                    extra={"metadata": {"page": page.path.name, "errors": result.errors}})
+
+
+def _pv_errors_from(page: Page, profile) -> list[str]:
+    from .profile import validate_page
+    return validate_page(page.frontmatter, profile=profile).errors
 
 
 def stage_or_publish(

@@ -273,6 +273,27 @@ class Settings(BaseSettings):
     llm_timeout: float = 600.0
     llm_fast_timeout: float = 120.0
 
+    # ── Profile / schema contract ────────────────────────────────────────────
+    # Runtime-enforced page-frontmatter contract (allowed kinds/domains, required
+    # fields, confidence bounds, entity/relation vocabularies). "off" disables it;
+    # "warn" (default) logs + audits violations but still writes; "strict" raises so
+    # ingest routes the offending page to review instead of publishing it.
+    profile_enforcement: str = "warn"
+    # Optional JSON override; empty → the built-in DEFAULT_PROFILE (matches CLAUDE.md).
+    profile_path: str = ""
+
+    # ── Feedback curator ─────────────────────────────────────────────────────
+    # Capture high-signal user corrections / preferences / approvals as reviewable
+    # memory candidates (generic acks are dropped). Promotion turns a candidate into
+    # durable memory (a curated page, an active preference, or page reinforcement).
+    feedback_enabled: bool = True
+    # Explicit promotion by default (a human decides); True auto-promotes high-signal
+    # corrections/preferences at record time.
+    feedback_auto_promote: bool = False
+    # Active promoted preferences are injected into synthesis so answers respect them.
+    feedback_inject_preferences: bool = True
+    feedback_max_preferences: int = 8
+
     def required_models(self) -> list[str]:
         # Deduplicate — model_fast may == model_reason in the 4-model stack.
         seen: list[str] = []

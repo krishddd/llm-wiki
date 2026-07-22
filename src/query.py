@@ -302,6 +302,8 @@ class QueryEngine:
         self.procedures = None
         # Semantic answer cache — likewise injected post-construction; None disables it.
         self.answer_cache = None
+        # Feedback curator — injected post-construction; supplies active user preferences.
+        self.feedback = None
 
     # ── Advanced pre-retrieval helpers ──
 
@@ -774,12 +776,28 @@ class QueryEngine:
                     "reproduce a relevant table verbatim and cite its page):\n" + "\n\n".join(lines)
                 )
 
+        # Feedback curator: promoted user PREFERENCES steer how the answer is produced
+        # (tone, citation habits, formatting). Injected as a high-priority instruction.
+        pref_context = ""
+        if getattr(self, "feedback", None) is not None and getattr(self.s, "feedback_inject_preferences", True):
+            try:
+                prefs = self.feedback.active_preferences(
+                    limit=getattr(self.s, "feedback_max_preferences", 8)
+                )
+                if prefs:
+                    pref_context = (
+                        "\n\nUSER PREFERENCES (learned from prior feedback — honour these):\n"
+                        + "\n".join(f"- {p}" for p in prefs)
+                    )
+            except Exception as e:
+                log.debug("preference injection failed", extra={"metadata": {"error": str(e)[:120]}})
+
         # 4a) Adaptive model routing. Quantitative / STEM questions (maths, economics,
         # science, engineering / industrial materials) are REASONED by the specialist
         # solver (VibeThinker); qwen then formats + cites that reasoning. Plain-English
         # questions skip the solver and go straight to qwen synthesis. Any solver
         # failure (model not installed, timeout) silently falls back to qwen-only.
-        prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}{media_context}"
+        prompt = f"QUESTION:\n{question}\n\nWIKI PAGES:\n{ctx}{fact_context}{media_context}{pref_context}"
         reasoner_used = "reason"
         if (
             self.s.route_solver_enabled
@@ -800,7 +818,7 @@ class QueryEngine:
                         f"VERIFIED EXPERT REASONING (treat as a trusted working — preserve its "
                         f"numbers, formulas and final result; your job is to format and cite it "
                         f"against the wiki pages):\n{reasoning[:6000]}\n\n"
-                        f"WIKI PAGES:\n{ctx}{fact_context}{media_context}"
+                        f"WIKI PAGES:\n{ctx}{fact_context}{media_context}{pref_context}"
                     )
             except Exception as e:
                 log.warning(
