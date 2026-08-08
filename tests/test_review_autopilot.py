@@ -7,8 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.wiki.pages import Page, read_page, write_page
-from src.wiki.review_autopilot import autopilot_review, entity_grounding
+from llm_wiki.wiki.pages import Page, read_page, write_page
+from llm_wiki.wiki.review_autopilot import autopilot_review, entity_grounding
 
 
 def _settings(**kw):

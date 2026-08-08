@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.agentic_ingest import IngestPlan, plan_ingest
+from llm_wiki.agentic_ingest import IngestPlan, plan_ingest
 
 
 @dataclass

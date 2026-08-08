@@ -28,7 +28,7 @@ def main() -> None:
 
 
 async def _run(args) -> None:
-    from src.loaders.okf_loader import import_okf_bundle, validate_bundle
+    from llm_wiki.loaders.okf_loader import import_okf_bundle, validate_bundle
 
     report = validate_bundle(args.bundle)
     print(f"bundle validation: conformant={report['conformant']} pages={report['pages']}")
@@ -39,14 +39,14 @@ async def _run(args) -> None:
 
     bm25 = dense = graph = client = None
     if not args.no_index:
-        from src.llm import get_client
-        from src.search.bm25_index import BM25Index
-        from src.search.dense_index import DenseIndex
+        from llm_wiki.llm import get_client
+        from llm_wiki.search.bm25_index import BM25Index
+        from llm_wiki.search.dense_index import DenseIndex
         client = get_client()
         bm25 = BM25Index(Path(args.data_dir) / "bm25.pkl")
         dense = DenseIndex(Path(args.data_dir) / "chroma", embed_fn=client.embed)
     if not args.no_graph:
-        from src.graph import KnowledgeGraph
+        from llm_wiki.graph import KnowledgeGraph
         graph = KnowledgeGraph(Path(args.data_dir) / "graph.db")
 
     result = await import_okf_bundle(
@@ -57,7 +57,7 @@ async def _run(args) -> None:
     for e in result.errors[:10]:
         print(f"  error: {e}")
 
-    from src.wiki.index_md import rebuild_index
+    from llm_wiki.wiki.index_md import rebuild_index
     rebuild_index(Path(args.wiki_dir))
     if client is not None:
         await client.aclose()

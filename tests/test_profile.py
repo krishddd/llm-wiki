@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-from src.wiki.pages import Page, write_page
-from src.wiki.profile import (
+from llm_wiki.wiki.pages import Page, write_page
+from llm_wiki.wiki.profile import (
     DEFAULT_PROFILE,
     Profile,
     ProfileViolation,
@@ -80,8 +80,8 @@ def test_load_profile_missing_or_broken_returns_default(tmp_path):
 
 def test_write_page_warn_mode_still_writes(tmp_path, monkeypatch):
     # Default enforcement is "warn" → a schema-violating page still lands on disk.
-    from src import config as cfg
-    from src.wiki import pages as pages_mod
+    from llm_wiki import config as cfg
+    from llm_wiki.wiki import pages as pages_mod
     s = cfg.Settings(profile_enforcement="warn")
     monkeypatch.setattr(pages_mod, "get_settings", lambda: s)
     path = tmp_path / "sources" / "bad.md"
@@ -90,8 +90,8 @@ def test_write_page_warn_mode_still_writes(tmp_path, monkeypatch):
 
 
 def test_write_page_strict_mode_raises(tmp_path, monkeypatch):
-    from src import config as cfg
-    from src.wiki import pages as pages_mod
+    from llm_wiki import config as cfg
+    from llm_wiki.wiki import pages as pages_mod
     s = cfg.Settings(profile_enforcement="strict")
     monkeypatch.setattr(pages_mod, "get_settings", lambda: s)
     path = tmp_path / "sources" / "bad.md"

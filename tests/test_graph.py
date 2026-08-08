@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.graph import ExtractedEntity, ExtractedRelation, KnowledgeGraph
+from llm_wiki.graph import ExtractedEntity, ExtractedRelation, KnowledgeGraph
 
 
 @pytest.mark.asyncio

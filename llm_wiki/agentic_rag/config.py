@@ -1,6 +1,6 @@
 """Agentic-layer settings. Loaded from env with the `AGENTIC_` prefix.
 
-Kept separate from `src.config.Settings` so the agentic layer can be enabled,
+Kept separate from `llm_wiki.config.Settings` so the agentic layer can be enabled,
 tuned, or disabled without touching the core engine config.
 """
 from __future__ import annotations

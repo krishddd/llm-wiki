@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import pytest
 
-from src.graph import KnowledgeGraph
-from src.ingest import Ingestor
-from src.search.bm25_index import BM25Index
+from llm_wiki.graph import KnowledgeGraph
+from llm_wiki.ingest import Ingestor
+from llm_wiki.search.bm25_index import BM25Index
 
 
 @pytest.mark.asyncio
@@ -23,7 +23,7 @@ async def test_ingest_small_md(tmp_settings, fake_ollama, tmp_path):
     assert result.page_path
     assert (tmp_settings.wiki_dir / "sources").glob("*.md")
     # OKF conformance: source pages carry kind/type/description/resource/timestamp.
-    from src.wiki.pages import read_page
+    from llm_wiki.wiki.pages import read_page
     fm = read_page(next((tmp_settings.wiki_dir / "sources").glob("*.md"))).frontmatter
     assert fm["kind"] == "source"
     assert fm["type"] == "Source Document"

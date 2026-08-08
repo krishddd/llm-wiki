@@ -45,14 +45,14 @@ def main() -> None:
 
 
 async def _run(args) -> None:
-    from src.eval_harness import (
+    from llm_wiki.eval_harness import (
         RETRIEVAL_ABLATIONS,
         build_eval_indexes,
         eval_answers,
         eval_retrieval,
         load_golden,
     )
-    from src.llm import get_client
+    from llm_wiki.llm import get_client
 
     if not args.golden.exists():
         print(f"golden set not found: {args.golden} — run scripts/gen_golden.py first")
@@ -76,8 +76,8 @@ async def _run(args) -> None:
               f"mrr={r['mrr']:.3f} hit={r['hit_rate']:.3f} {r['avg_latency_ms']:.0f}ms")
 
     if args.answers:
-        from src.config import get_settings
-        from src.query import QueryEngine
+        from llm_wiki.config import get_settings
+        from llm_wiki.query import QueryEngine
         engine = QueryEngine(bm25=bm25, dense=dense, page_store=store,
                              graph=None, settings=get_settings(), client=client)
         engine.procedures = None

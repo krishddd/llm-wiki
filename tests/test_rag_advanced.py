@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from src.query import _litm_reorder
-from src.search import hybrid as hybrid_module
-from src.search.chunks import (
+from llm_wiki.query import _litm_reorder
+from llm_wiki.search import hybrid as hybrid_module
+from llm_wiki.search.chunks import (
     SUB_CHUNK_OVERLAP,
     SUB_CHUNK_TARGET,
     chunk_text,
@@ -16,10 +16,10 @@ from src.search.chunks import (
     indexable_text,
     matched_chunk_indices,
 )
-from src.search.hybrid import hybrid_search
-from src.synth.claims import parse_claims
-from src.synth.verify import apply_verdicts, verify_claims
-from src.wiki.topics import build_topic_pages, greedy_cluster
+from llm_wiki.search.hybrid import hybrid_search
+from llm_wiki.synth.claims import parse_claims
+from llm_wiki.synth.verify import apply_verdicts, verify_claims
+from llm_wiki.wiki.topics import build_topic_pages, greedy_cluster
 
 # ───── chunks.py ─────
 
@@ -187,7 +187,7 @@ class _TopicClient:
 
 @pytest.mark.asyncio
 async def test_build_topic_pages_writes_topic(tmp_path: Path):
-    from src.wiki.pages import Page, write_page
+    from llm_wiki.wiki.pages import Page, write_page
     wiki = tmp_path / "wiki"
     (wiki / "sources").mkdir(parents=True)
     for i in range(3):
@@ -208,7 +208,7 @@ async def test_build_topic_pages_writes_topic(tmp_path: Path):
     assert result["topics_written"] == 1
     topic_files = list((wiki / "sources").glob("topic-*.md"))
     assert len(topic_files) == 1
-    from src.wiki.pages import read_page
+    from llm_wiki.wiki.pages import read_page
     fm = read_page(topic_files[0]).frontmatter
     assert fm["kind"] == "topic"
     assert fm["type"] == "Topic Overview"

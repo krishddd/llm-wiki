@@ -53,7 +53,7 @@ def _materialize_query(task: SubTask, dep_results: dict[int, list]) -> str:
 async def execute_fanout(
     sub_tasks: list[SubTask],
     *,
-    engine,                            # src.query.QueryEngine — typed as Any to avoid cycle
+    engine,                            # llm_wiki.query.QueryEngine — typed as Any to avoid cycle
     top_k: int = 5,
     graph_expand: bool = True,
     hyde_text: str | None = None,

@@ -8,7 +8,7 @@ Covers:
 """
 from __future__ import annotations
 
-from src.query import Citation, QueryEngine, _check_grounded, _token_matches_title
+from llm_wiki.query import Citation, QueryEngine, _check_grounded, _token_matches_title
 
 
 def test_query_engine_defaults_procedures_to_none():

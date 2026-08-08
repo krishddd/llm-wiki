@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from src.providers import (
+from llm_wiki.providers import (
     ProviderSpec,
     build_chat_payload,
     chat_completion,

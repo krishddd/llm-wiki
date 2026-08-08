@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from src.wiki.feedback import (
+from llm_wiki.wiki.feedback import (
     FeedbackStore,
     _heuristic_kind,
     classify_feedback,

@@ -1,5 +1,10 @@
 # llm-wiki
 
+[![PyPI](https://img.shields.io/pypi/v/llm-compounding-wiki.svg)](https://pypi.org/project/llm-compounding-wiki/)
+[![Python](https://img.shields.io/pypi/pyversions/llm-compounding-wiki.svg)](https://pypi.org/project/llm-compounding-wiki/)
+[![Docs](https://img.shields.io/badge/docs-github%20pages-blue.svg)](https://krishddd.github.io/llm-wiki/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+
 > A self-healing local knowledge base where a local LLM compounds your
 > documents across four memory tiers — working, episodic, semantic, and
 > procedural — with bi-temporal facts, automatic contradiction resolution,
@@ -633,10 +638,25 @@ OpenAI `image_url`). All default to `ollama`.
 
 ## Quickstart
 
+### Install from PyPI
+
+```bash
+pip install llm-compounding-wiki          # core pipeline + FastAPI app
+pip install "llm-compounding-wiki[mcp]"   # + agent-facing MCP server
+pip install "llm-compounding-wiki[ocr]"   # + scanned-PDF OCR (needs Tesseract/Poppler)
+
+llm-wiki serve --port 8000                # run the API (uvicorn llm_wiki.api:app)
+llm-wiki mcp                              # run the MCP server
+```
+
+The import package is `llm_wiki`; the distribution on PyPI is `llm-compounding-wiki`.
+
+### From source
+
 ```bash
 git clone https://github.com/krishddd/llm-wiki.git
 cd llm-wiki
-pip install -r requirements.txt
+pip install -e ".[dev]"    # or: pip install -r requirements.txt
 cp .env.example .env
 
 # Option A — fully local (default): pull the Ollama models
@@ -649,7 +669,7 @@ ollama pull nomic-embed-text
 #   groq / github / xai / openrouter / custom — see the provider table above)
 
 # Run the API
-uvicorn src.api:app --reload --port 8000
+uvicorn llm_wiki.api:app --reload --port 8000
 ```
 
 Ingest a doc, then ask a question:
@@ -664,7 +684,7 @@ curl -X POST http://localhost:8000/query \
 Run the agent over MCP:
 
 ```bash
-python -m src.mcp_server   # exposes ingest / query / lint as MCP tools
+python -m llm_wiki.mcp_server   # exposes ingest / query / lint as MCP tools
 ```
 
 Trigger a job manually:
@@ -678,7 +698,7 @@ curl -X POST http://localhost:8000/admin/run/promote_episodic
 ## Project structure
 
 ```
-src/
+llm_wiki/
 ├── api.py                 FastAPI endpoints
 ├── ingest.py              Multi-format ingest pipeline (+ Doc2Query)
 ├── query.py               Hybrid retrieval + reflective synthesis + save-back
@@ -781,6 +801,14 @@ every push to `main`. Strict ruff config lives in `pyproject.toml`. The
 integration suite (`workflows/integration.yml`) is gated behind a manually
 triggered `workflow_dispatch` plus a `REMOTE_OLLAMA_HOST` secret, so day-to-day
 CI never depends on a live LLM.
+
+Two more workflows handle release:
+
+- **`publish.yml`** — builds the sdist/wheel and publishes to PyPI via
+  [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC, no stored
+  token) when a GitHub Release is published.
+- **`docs.yml`** — builds the MkDocs Material site and deploys it to GitHub Pages
+  on every push to `main` that touches the docs.
 
 ---
 

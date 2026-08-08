@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.search import hybrid as hybrid_module
-from src.search.hybrid import _rrf_fuse, hybrid_search
+from llm_wiki.search import hybrid as hybrid_module
+from llm_wiki.search.hybrid import _rrf_fuse, hybrid_search
 
 
 class StubIndex:

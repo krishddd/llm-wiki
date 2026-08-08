@@ -58,9 +58,9 @@ def main() -> None:
 
 
 async def _run(args) -> None:
-    from src.eval_harness import GoldenItem, load_golden, save_golden
-    from src.llm import get_client
-    from src.wiki.pages import PageStore
+    from llm_wiki.eval_harness import GoldenItem, load_golden, save_golden
+    from llm_wiki.llm import get_client
+    from llm_wiki.wiki.pages import PageStore
 
     client = get_client()
     store = PageStore(Path(args.wiki_dir))

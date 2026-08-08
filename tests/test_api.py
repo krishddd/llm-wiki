@@ -10,12 +10,12 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 
-from src import api as api_module
+from llm_wiki import api as api_module
 
 
 @pytest.fixture
 def client(monkeypatch, fake_ollama, tmp_settings):
-    from src import config as cfg
+    from llm_wiki import config as cfg
 
     # `api.py` binds `get_settings` at import (`from .config import get_settings`), so
     # the endpoints resolve the *api-module* name — patching only `cfg.get_settings`

@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from src.eval_harness import GoldenItem, eval_retrieval, load_golden, save_golden
-from src.loaders.okf_loader import import_okf_bundle, validate_bundle
-from src.wiki.okf_export import export_okf_bundle
-from src.wiki.pages import Page, read_page, write_page
+from llm_wiki.eval_harness import GoldenItem, eval_retrieval, load_golden, save_golden
+from llm_wiki.loaders.okf_loader import import_okf_bundle, validate_bundle
+from llm_wiki.wiki.okf_export import export_okf_bundle
+from llm_wiki.wiki.pages import Page, read_page, write_page
 
 
 def _make_bundle(root: Path) -> Path:

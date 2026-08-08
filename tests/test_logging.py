@@ -1,12 +1,12 @@
 import json
 import logging
 
-from src.logging_config import correlation_id_ctx, new_correlation_id, setup_logging
+from llm_wiki.logging_config import correlation_id_ctx, new_correlation_id, setup_logging
 
 
 def test_correlation_id_in_log(tmp_path):
     # setup_logging is idempotent across the process — reset so the handlers point at this tmp_path.
-    from src import logging_config as lc
+    from llm_wiki import logging_config as lc
     lc._configured = False
     setup_logging(tmp_path)
     cid = new_correlation_id()

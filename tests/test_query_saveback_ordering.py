@@ -19,10 +19,10 @@ import json
 
 import pytest
 
-from src.query import QueryEngine
-from src.search.bm25_index import BM25Index
-from src.search.dense_index import DenseIndex
-from src.wiki.pages import Page, PageStore, write_page
+from llm_wiki.query import QueryEngine
+from llm_wiki.search.bm25_index import BM25Index
+from llm_wiki.search.dense_index import DenseIndex
+from llm_wiki.wiki.pages import Page, PageStore, write_page
 
 SYNTH_JSON = json.dumps({
     "answer": ("Docker packages applications into containers [Seed Page A]^0.95. "
