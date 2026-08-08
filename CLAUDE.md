@@ -21,7 +21,7 @@
 All models served via Ollama at `OLLAMA_HOST` (default `http://localhost:11434`).
 `MODEL_FAST = MODEL_REASON` is intentional — disables a missing-llama3.2 fallback.
 
-### Multi-provider LLM fleet (v4, `src/providers.py`)
+### Multi-provider LLM fleet (v4, `llm_wiki/providers.py`)
 
 Each role can be routed to a hosted, OpenAI-compatible provider instead of
 Ollama via `PROVIDER_<ROLE>` (`summary` / `reason` / `fast` / `solver` / `embed` /
@@ -46,7 +46,7 @@ is a tiny reasoning specialist: world-class on competition maths / STEM / code, 
 replacement — it is routed to ONLY for quantitative questions via a **reason→format**
 two-stage:
 
-1. `src/search/domain.py` detects the cognition required (general / math / science /
+1. `llm_wiki/search/domain.py` detects the cognition required (general / math / science /
    economics / engineering) by heuristic regex over the question + retrieved context.
 2. If quantitative (`needs_solver()` True) and `route_solver_enabled`, VibeThinker
    does the step-by-step derivation (`OllamaClient.solver()`, temp 0.6, top_p 0.95).
@@ -66,7 +66,7 @@ with `temperature 0.6`, `top_p 0.95`, `num_ctx 40960`) or run a vLLM sidecar. Se
 
 `model_embed_stem` (default `bge-m3`, off unless `EMBED_STEM_ENABLED=true`) is a
 stronger embedder for notation-heavy content. When enabled, `DomainRoutedDenseIndex`
-(`src/search/dense_router.py`) keeps a **separate** STEM dense collection
+(`llm_wiki/search/dense_router.py`) keeps a **separate** STEM dense collection
 (`chroma_stem`) — two embedders mean two incompatible vector spaces, so they cannot
 share one collection. Routing: quantitative pages (domain ∈ {math, science, economics,
 engineering}) are indexed into BOTH general and STEM collections; quantitative queries
@@ -82,7 +82,7 @@ Five techniques layered onto the existing pipeline (each flag-gated, on by defau
 
 | Technique | Where | Flag |
 |---|---|---|
-| **Small-to-big retrieval** — rerank/synthesise the matched 1500-char sub-chunks (±neighbours) instead of `page[:4000]`; `src/search/chunks.py` re-derives the exact index-time chunks | `hybrid.py` | `QUERY_CHUNK_CONTEXT` |
+| **Small-to-big retrieval** — rerank/synthesise the matched 1500-char sub-chunks (±neighbours) instead of `page[:4000]`; `llm_wiki/search/chunks.py` re-derives the exact index-time chunks | `hybrid.py` | `QUERY_CHUNK_CONTEXT` |
 | **Doc2Query** (Nogueira & Lin) — index the questions each doc answers as `<pid>#hq` so question-phrased queries match declarative text | `ingest.py` | `INGEST_DOC2QUERY` |
 | **Lost-in-the-middle reorder** (Liu et al. 2023) — ends-load synthesis context: best page first, runner-up last | `query.py` | `QUERY_LITM_REORDER` |
 | **NLI-lite claim verification** — one batched summary-role call judges each cited claim against its cited snippet; unsupported ×0.35 confidence | `synth/verify.py` | `QUERY_CLAIM_VERIFY` |
@@ -92,14 +92,14 @@ Five techniques layered onto the existing pipeline (each flag-gated, on by defau
 Supporting tooling:
 - `scripts/backfill_v5.py` — one-off `#hq` + topic backfill for pre-v5 pages
   (`--summary-model`/`--reason-model` override when gemma4/qwen3 aren't pulled).
-- **Eval harness** (`src/eval_harness.py`): `scripts/gen_golden.py` builds
+- **Eval harness** (`llm_wiki/eval_harness.py`): `scripts/gen_golden.py` builds
   `eval/golden.jsonl` from the live wiki; `scripts/run_eval.py [--ablate] [--answers]`
   measures recall@k / MRR / latency per one-flag-off variant and answer quality.
   Run it before adding or removing retrieval techniques.
 - **OKF bundles**: `scripts/export_okf.py <out>` ships sources/entities/procedures as
   a validated standalone bundle; `scripts/import_okf.py <bundle>` imports external
   bundles as curated pages (no LLM pass; links → RELATES_TO edges);
-  `src/loaders/okf_loader.py::validate_bundle` checks conformance.
+  `llm_wiki/loaders/okf_loader.py::validate_bundle` checks conformance.
 - `rerank()` degrades to RRF-order passthrough when flashrank isn't installed.
 
 ---
@@ -135,7 +135,7 @@ Supporting tooling:
 LLM_Wiki/
 ├── CLAUDE.md                  ← This file (human-facing)
 ├── AGENTS.md                  ← Agent-facing tool/resource catalogue
-├── src/
+├── llm_wiki/
 │   ├── api.py                 ← FastAPI endpoints
 │   ├── ingest.py              ← Ingest pipeline (loaders → summarise → claims → graph)
 │   ├── query.py               ← Hybrid retrieval + reflective synthesis + save-back
@@ -321,7 +321,7 @@ semantic answer cache (opt-in) — embed the question; on cosine ≥ threshold v
   → HyDE seed for dense
   → hybrid retrieval (BM25 + dense → RRF → FlashRank → graph 2-hop → MMR)
        → small-to-big: rerank/synthesise the MATCHED sub-chunks (±neighbours),  [v5]
-         not page[:4000] — src/search/chunks.py re-derives index-time chunks
+         not page[:4000] — llm_wiki/search/chunks.py re-derives index-time chunks
        → machine-page down-weight (synthesis/promoted/crystallized ×0.85)      [v5]
   → mark_accessed() on retrieved pages              [v2 — Phase B3]
   → CRAG relevance filter (drop off-topic)
@@ -388,7 +388,7 @@ Manual: `POST /admin/run/{job_name}` runs any registered job once.
   3. **Auto-resolver** (Phase E2): when a contradiction is detected with composite score margin ≥ 0.2.
 - Below the margin → leave both active, surface in `GET /admin/contradictions` for human review.
 
-## Agentic ingestion (implemented — `src/agentic_ingest.py`)
+## Agentic ingestion (implemented — `llm_wiki/agentic_ingest.py`)
 
 `plan_ingest()` inspects each document's structure (element kinds/counts, structural
 density, text length) and a content sample, then picks an adaptive chunk plan instead
@@ -402,9 +402,9 @@ Heuristic-first (on by default, zero LLM cost). Optional summary-role refinement
 `INGEST_PLANNING_LLM` (one extra call per doc). All sizes clamped to [1500, 9000] /
 [80, 600]. The chosen strategy is recorded in frontmatter as `chunk_strategy`.
 
-## Privacy filtering (implemented — `src/privacy.py`)
+## Privacy filtering (implemented — `llm_wiki/privacy.py`)
 
-Implemented in `src/privacy.py`. `redact_text()` is applied to raw element text in
+Implemented in `llm_wiki/privacy.py`. `redact_text()` is applied to raw element text in
 `ingest_file()` BEFORE it reaches the summariser / claims / graph / embeddings /
 on-disk page. Each secret becomes a typed `[REDACTED:<cat>]` placeholder so prose
 stays coherent.

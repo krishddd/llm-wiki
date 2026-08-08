@@ -2,7 +2,7 @@
 
 > Agent-facing companion to `CLAUDE.md`. Lists the tools, resources, and
 > conventions an MCP-aware agent (Claude Code, Cursor, Codex, etc.) must
-> follow when driving this wiki. Loaded by `src/mcp_server.py`.
+> follow when driving this wiki. Loaded by `llm_wiki/mcp_server.py`.
 
 ## Quick start for an agent
 
