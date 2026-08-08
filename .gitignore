@@ -11,6 +11,7 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+site/
 
 .env
 .env.local

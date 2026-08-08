@@ -25,10 +25,10 @@ jobs:
           elif [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install ruff mypy pytest pytest-cov pytest-asyncio
       - name: Ruff
-        run: ruff check src tests
+        run: ruff check llm_wiki tests
       - name: Mypy (non-blocking)
         continue-on-error: true
-        run: mypy src || true
+        run: mypy llm_wiki || true
       - name: Unit tests — deterministic features (blocking)
         # No Ollama/network needed; these gate the adaptive-pipeline features.
         env:

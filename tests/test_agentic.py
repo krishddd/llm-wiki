@@ -10,11 +10,11 @@ from dataclasses import dataclass
 
 import pytest
 
-from src.agentic_rag.agentic_query import agentic_answer
-from src.agentic_rag.feedback_rewriter import rewrite_for_gaps
-from src.agentic_rag.planner import plan_retrieval
-from src.agentic_rag.search_fanout import SubTask, execute_fanout
-from src.agentic_rag.sufficient_context import (
+from llm_wiki.agentic_rag.agentic_query import agentic_answer
+from llm_wiki.agentic_rag.feedback_rewriter import rewrite_for_gaps
+from llm_wiki.agentic_rag.planner import plan_retrieval
+from llm_wiki.agentic_rag.search_fanout import SubTask, execute_fanout
+from llm_wiki.agentic_rag.sufficient_context import (
     SufficientContextVerdict,
     evaluate_sufficient_context,
 )
@@ -190,7 +190,7 @@ class FakeEngine:
 
     async def answer(self, question, **kw):
         # Pretend a real QueryResult — return a minimal stub object.
-        from src.query import QueryResult
+        from llm_wiki.query import QueryResult
         return QueryResult(
             answer="final",
             answer_raw="final",

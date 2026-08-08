@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.search.dense_router import DomainRoutedDenseIndex
+from llm_wiki.search.dense_router import DomainRoutedDenseIndex
 
 
 class FakeIndex:

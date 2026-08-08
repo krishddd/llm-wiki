@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include CLAUDE.md
+include AGENTS.md
+include requirements.txt
+recursive-include llm_wiki/static *
+global-exclude __pycache__ *.py[cod]

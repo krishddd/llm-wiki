@@ -1,7 +1,7 @@
 """Privacy / secret redaction tests — secrets must be stripped before ingest."""
 from __future__ import annotations
 
-from src.privacy import redact_text
+from llm_wiki.privacy import redact_text
 
 
 def test_redacts_openai_style_key() -> None:

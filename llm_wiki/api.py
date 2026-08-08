@@ -45,7 +45,7 @@ import contextlib
 from fastapi.staticfiles import StaticFiles
 
 # Mount the dashboard from a path relative to THIS file, not the process CWD, so
-# `uvicorn src.api:app` works from any working directory. Skip (don't crash) if the
+# `uvicorn llm_wiki.api:app` works from any working directory. Skip (don't crash) if the
 # static dir isn't present — the API is fully usable without the dashboard.
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 if _STATIC_DIR.is_dir():
@@ -807,7 +807,7 @@ async def context_start(days: int = 7, top_pages: int = 5) -> dict[str, Any]:
 
     # Top-N most-accessed pages (Phase B reinforcement counts).
     # Acquire the graph lock — page_access is shared with the reinforcement
-    # writer in src/wiki/lifecycle.py:mark_accessed.
+    # writer in llm_wiki/wiki/lifecycle.py:mark_accessed.
     top: list[dict] = []
     try:
         async with state.graph._lock:

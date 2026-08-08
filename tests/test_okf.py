@@ -4,9 +4,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from src.wiki.index_md import rebuild_index
-from src.wiki.log_md import append_log
-from src.wiki.pages import (
+from llm_wiki.wiki.index_md import rebuild_index
+from llm_wiki.wiki.log_md import append_log
+from llm_wiki.wiki.pages import (
     Page,
     PageStore,
     derive_description,
@@ -91,7 +91,7 @@ def test_append_log_newest_first_date_groups(tmp_path: Path):
 def test_stage_or_publish_slug_collision_disambiguates(tmp_path: Path, monkeypatch):
     from types import SimpleNamespace
 
-    from src.wiki.pages import stage_or_publish
+    from llm_wiki.wiki.pages import stage_or_publish
     settings = SimpleNamespace(wiki_dir=tmp_path, confidence_threshold=0.6)
 
     fm_a = {"title": "Same Title", "kind": "source", "source": "raw/a.pdf", "confidence": 0.9}

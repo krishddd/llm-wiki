@@ -7,12 +7,12 @@ directly — making LLM-Wiki "agent-native" without code-duplicating the harness
 This is a THIN wrapper around the existing FastAPI service. Two run modes:
 
 1. STDIO (default for local Claude Code):
-       python -m src.mcp_server
+       python -m llm_wiki.mcp_server
    Configure in your client's MCP config:
-       {"command":"python","args":["-m","src.mcp_server"], "cwd":"/path/to/LLM_Wiki"}
+       {"command":"python","args":["-m","llm_wiki.mcp_server"], "cwd":"/path/to/LLM_Wiki"}
 
 2. SSE / HTTP (for remote agents):
-       python -m src.mcp_server --transport sse --port 9000
+       python -m llm_wiki.mcp_server --transport sse --port 9000
 
 Requires `mcp` Python SDK:  pip install "mcp[cli]"
 """

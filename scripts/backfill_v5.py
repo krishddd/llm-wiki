@@ -48,12 +48,12 @@ def main() -> None:
 
 
 async def _run(args) -> None:
-    from src.config import get_settings
-    from src.ingest import Ingestor
-    from src.llm import get_client
-    from src.search.bm25_index import BM25Index
-    from src.search.dense_index import DenseIndex
-    from src.wiki.pages import PageStore, write_page
+    from llm_wiki.config import get_settings
+    from llm_wiki.ingest import Ingestor
+    from llm_wiki.llm import get_client
+    from llm_wiki.search.bm25_index import BM25Index
+    from llm_wiki.search.dense_index import DenseIndex
+    from llm_wiki.wiki.pages import PageStore, write_page
 
     s = get_settings()
     client = get_client()
@@ -92,7 +92,7 @@ async def _run(args) -> None:
         print(f"hq backfill: {done} pages backfilled, {skipped} already had questions")
 
     if not args.skip_topics:
-        from src.wiki.topics import build_topic_pages
+        from llm_wiki.wiki.topics import build_topic_pages
         result = await build_topic_pages(
             wiki_dir=Path(args.wiki_dir), client=client, bm25=bm25, dense=dense,
             min_cluster=s.topics_min_cluster, max_topics=s.topics_max,

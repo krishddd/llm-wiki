@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from src.config import Settings
+from llm_wiki.config import Settings
 
 
 class FakeOllama:

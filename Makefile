@@ -4,21 +4,21 @@ install:
 	pip install -r requirements-dev.txt
 
 dev:
-	uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+	uvicorn llm_wiki.api:app --host 0.0.0.0 --port 8000 --reload
 
 test:
-	pytest -q --cov=src --cov-report=term-missing -m "not integration"
+	pytest -q --cov=llm_wiki --cov-report=term-missing -m "not integration"
 
 test-integration:
 	pytest -q -m integration
 
 lint:
-	ruff check src tests
-	mypy src
+	ruff check llm_wiki tests
+	mypy llm_wiki
 
 fmt:
-	ruff check --fix src tests
-	ruff format src tests
+	ruff check --fix llm_wiki tests
+	ruff format llm_wiki tests
 
 up:
 	docker compose up -d --build

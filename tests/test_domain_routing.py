@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.llm import strip_think
-from src.search.domain import heuristic_domain, needs_solver
+from llm_wiki.llm import strip_think
+from llm_wiki.search.domain import heuristic_domain, needs_solver
 
 
 @pytest.mark.parametrize(

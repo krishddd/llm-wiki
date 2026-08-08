@@ -1,6 +1,6 @@
 import pytest
 
-from src.search.bm25_index import BM25Index
+from llm_wiki.search.bm25_index import BM25Index
 
 
 @pytest.mark.asyncio

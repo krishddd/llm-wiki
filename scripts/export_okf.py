@@ -19,7 +19,7 @@ def main() -> None:
                     help="don't wipe out_dir before exporting")
     args = ap.parse_args()
 
-    from src.wiki.okf_export import export_okf_bundle
+    from llm_wiki.wiki.okf_export import export_okf_bundle
     stats = export_okf_bundle(args.wiki_dir, args.out_dir, clean=not args.keep_existing)
     print(f"exported {stats['pages_exported']} pages -> {stats['out_dir']}")
     print(f"conformant: {stats['conformant']} "

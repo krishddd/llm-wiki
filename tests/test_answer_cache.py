@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.query import QueryEngine
-from src.wiki.answer_cache import SemanticAnswerCache, _cosine
+from llm_wiki.query import QueryEngine
+from llm_wiki.wiki.answer_cache import SemanticAnswerCache, _cosine
 
 
 class _FakePageStore:

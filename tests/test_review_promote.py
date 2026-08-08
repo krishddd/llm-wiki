@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from src.graph import KnowledgeGraph
-from src.wiki.pages import read_page
-from src.wiki.review_promote import promote_review_page
+from llm_wiki.graph import KnowledgeGraph
+from llm_wiki.wiki.pages import read_page
+from llm_wiki.wiki.review_promote import promote_review_page
 
 
 class FakeIndex:

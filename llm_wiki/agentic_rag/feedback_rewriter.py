@@ -2,7 +2,7 @@
 
 Takes the SCA's `missing_aspects` + `suggested_queries` and produces concrete
 search queries aimed at filling the gap. Different from
-`src.search.multi_query.paraphrase` (which rephrases the SAME question);
+`llm_wiki.search.multi_query.paraphrase` (which rephrases the SAME question);
 this one targets DIFFERENT information.
 """
 from __future__ import annotations
