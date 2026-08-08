@@ -10,7 +10,7 @@ jobs:
     env:
       OLLAMA_HOST: ${{ secrets.REMOTE_OLLAMA_HOST }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fail fast if OLLAMA_HOST unset
         run: |
           if [ -z "$OLLAMA_HOST" ]; then echo "REMOTE_OLLAMA_HOST secret missing"; exit 1; fi
@@ -25,7 +25,7 @@ jobs:
             sleep 3
           done
           echo "not healthy"; docker compose logs --tail=200; exit 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.11", cache: pip }
       - name: Install test deps
         run: |
