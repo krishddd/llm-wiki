@@ -817,6 +817,12 @@ Two more workflows handle release:
 Personal research project. Explores how far a local-first LLM-driven wiki
 can self-organise without a human curator.
 
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for dev
+setup, tests, and the release flow. Notable changes are tracked in
+[CHANGELOG.md](./CHANGELOG.md).
+
 ## License
 
-MIT
+[MIT](./LICENSE)
