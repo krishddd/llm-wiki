@@ -121,9 +121,12 @@ async def _final_synthesize(
         lock = asyncio.Lock()
         engine._agentic_synth_lock = lock
 
-    async def _stub(query_text: str, top_k: int, graph_expand: bool, hyde_text):
+    async def _stub(query_text: str, top_k: int, graph_expand: bool, hyde_text,
+                    use_mmr: bool = True, **_kw):
         # Return the accumulated set; engine.answer() will pick its own top_k.
         # accumulated_pages is already score-sorted by the agentic loop.
+        # Accept (and ignore) any extra retrieval kwargs the engine passes
+        # (e.g. use_mmr) so the signature stays compatible with _retrieve_one.
         return list(accumulated_pages)
 
     async with lock:

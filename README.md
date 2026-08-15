@@ -501,6 +501,62 @@ embedder (validated live: it hit paraphrases and rejected unrelated questions).
 Reproduce with the NVIDIA block in `.env.example` (`PROVIDER_*=nvidia` + `NVIDIA_API_KEY`),
 then the ingest / query / eval commands above.
 
+### Local single-LLM run — vLLM (Nemotron-4B) + hosted reason + OpenAI embeddings
+
+A second end-to-end run exercised a **mixed local/hosted fleet** on a fresh corpus of
+3 DOCX files (agent reliability, long-horizon planning, metamorphic testing):
+
+| Role | Provider · model |
+|---|---|
+| summary / fast / solver | **vLLM** `nvidia/Nemotron-Mini-4B-Instruct` (self-hosted, `custom` provider) |
+| reason (synthesis / lint / claim-verify) | **OpenAI** `gpt-4.1-mini` (fast, 128K context) |
+| embeddings | **OpenAI** `text-embedding-3-small` |
+
+This split — a tiny self-hosted model for the high-volume per-chunk work, a fast
+large-context hosted model for the whole-corpus reasoning, hosted embeddings — is the
+practical shape for a single-box setup.
+
+**Results:**
+
+| Endpoint / stage | Result |
+|---|---|
+| `/ingest` — 3 DOCX | ✅ 3 pages live, **385 entities / 406 relations**, no crash |
+| `/query` | ✅ grounded, 3 sources cited **with their tables**, intent `factual`, ~62 s |
+| `/query/agentic` | ✅ **HTTP 200 in ~41 s** — 7 sub-queries, multi-hop synthesis, 3 pages cited, clean prose (after the bug fix below) |
+| `/lint` | ✅ **HTTP 200 in ~3 s** — surfaced 18 missing entity pages |
+| Read endpoints (`/entities`, `/facts/{name}`, `/entities/{id}`, `/context/start`, `/wiki/index`, `/episodic`, `/profile`, `/review`, `/admin/jobs`, `/admin/contradictions`) | ✅ all instant |
+| `/admin/profile/validate` | ✅ 370 items checked, 0 violations |
+| `/feedback` (POST + GET) | ✅ stored, classified `correction`, actionable text extracted |
+
+**Reason-provider choice mattered — the same two endpoints on other providers:**
+
+| reason provider | `/lint` | `/query/agentic` |
+|---|---|---|
+| vLLM `Nemotron-Mini-4B` | ❌ `400` (context window too small for whole-corpus prompt) | partial (sub-calls overflow) |
+| NVIDIA free-tier `llama-3.3-70b` | ❌ `ReadTimeout` at 600 s (free-tier latency) | ❌ 500 after ~28 min |
+| **OpenAI `gpt-4.1-mini`** | ✅ **3 s** | ✅ **41 s** |
+
+**Limits surfaced (all infra/model, not pipeline):**
+- **Nemotron-Mini-4B has a small context window** — whole-corpus or snippet-heavy
+  prompts (`/lint`, some agentic sub-calls) overflow it and the vLLM returns
+  `400 Bad Request`, and the 4B model doesn't reliably emit the `[Title]^0.NN` citation
+  schema (raw `/query` answers can come back double-wrapped in JSON). Both clear up once
+  the **reason** role is a larger model — the retrieval/citations underneath are correct
+  either way. Keep the 4B on the high-volume summary/fast roles where it's a good fit.
+- **Free-tier hosted reasoners are latency-bound** — the whole-corpus `/lint` prompt
+  exceeds the 600 s client timeout on the NVIDIA free tier. Use a **fast** large-context
+  reason provider (OpenAI `gpt-4.1-mini`, Groq) or raise `LLM_TIMEOUT`.
+- **`grounded` is strict about citation markers** — `gpt-4.1-mini` cites sources but
+  doesn't always emit the literal `[Title]^0.NN` markers the grounding check scans for,
+  so the flag can read `false` on an answer that is in fact correct and cited.
+
+**Bug fixed during this run:** the agentic orchestrator temporarily swaps
+`QueryEngine._retrieve_one` for a stub during final synthesis, but the stub's signature
+didn't accept the `use_mmr` argument the engine passes — so **every** `/query/agentic`
+call crashed with `TypeError: _stub() got an unexpected keyword argument 'use_mmr'`.
+Fixed in [`llm_wiki/agentic_rag/agentic_query.py`](./llm_wiki/agentic_rag/agentic_query.py)
+by making the stub accept (and ignore) extra retrieval kwargs.
+
 ---
 
 ## OKF bundles — import & export
