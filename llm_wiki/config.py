@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     # Ollama-available default; swap for any embedder you prefer.
     model_embed_stem: str = "bge-m3"
     embed_stem_enabled: bool = False
+    # Matryoshka Representation Learning (MRL) — MRL-trained embedders (nomic-embed-text,
+    # OpenAI text-embedding-3) pack their most important semantics into the leading
+    # dimensions, so the output vector can be truncated + L2-renormalized to fewer dims
+    # at BOTH index and query time — slashing storage and speeding cosine search with
+    # near-zero accuracy loss. `embed_mrl_dims=0` disables (full-width). Applies ONLY to
+    # the DEFAULT embedder (the STEM override / bge-m3 is not MRL-trained). Because the
+    # stored and query vectors must share one dimensionality, CHANGING THIS REQUIRES A
+    # RE-EMBED / INDEX REBUILD (mixing 256-dim queries with 768-dim stored vectors breaks
+    # cosine). nomic-embed-text is 768-dim; 256 is Nomic's advertised MRL sweet spot.
+    embed_mrl_dims: int = 256
     model_reason: str = "qwen3:14b"
     model_summary: str = "gemma4:e4b"
     model_fast: str = "qwen3:14b"
@@ -169,10 +179,24 @@ class Settings(BaseSettings):
     # accordingly. Heuristic first, gemma fallback on ambiguous cases.
     query_adaptive_retrieval: bool = True
 
+    # Strict grounding — wrap each retrieved page in `<source id title>` XML tags so
+    # the synthesis model is instructed to use ONLY text inside those bounds, and force
+    # a deterministic fallback string when the context can't support an answer
+    # (XML tag isolation + negative-constraint forcing). Cheap, prompt-only.
+    query_xml_grounding: bool = True
+
     # Reflection / critique pass — post-synth gemma critique; optionally triggers
     # a single re-synthesis when the draft is incomplete or under-cited.
     query_reflect: bool = True
     query_reflect_refine: bool = True   # actually re-synthesize on weak drafts
+
+    # Reciprocal Rank Fusion smoothing constant `k` (Cormack et al.). Governs how
+    # steeply lower ranks are penalised when fusing the BM25 + dense (and multi-query)
+    # lists: low k (~10) is a PRECISION dial — heavily favours docs at the very top of
+    # any single retriever; high k (~60, the classic default) is a RECALL / CONSENSUS
+    # dial — lets a doc ranked mid-list by BOTH retrievers rise above a doc ranked #1
+    # by only one. Threaded into hybrid_search and the multi-query fusion.
+    rrf_k: int = 60
 
     # ── Best-of-best RAG package ─────────────────────────────────────────────
     # Small-to-big retrieval — rerank/synthesise on the sub-chunks that actually

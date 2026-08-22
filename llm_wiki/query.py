@@ -41,9 +41,19 @@ log = logging.getLogger(__name__)
 
 # ───── Prompts ─────
 
+# Deterministic negative-constraint fallback — emitted verbatim by the model (and
+# detectable at runtime) when the isolated context cannot support an answer.
+GROUNDING_FALLBACK = "I cannot answer this based on the provided context."
+
 SYNTH_SYSTEM = (
     "You are a careful research assistant producing a NotebookLM-style structured answer. "
     "Use ONLY the provided wiki pages. If they don't contain the answer, say so honestly.\n\n"
+    "GROUNDING RULES (strict):\n"
+    "- Each source is delimited by `<source id=\"N\" title=\"…\">…</source>` tags. Use ONLY text "
+    "found INSIDE those tags — never rely on outside/parametric knowledge.\n"
+    f"- If the sources do not contain enough information to answer, set \"answer\" to EXACTLY "
+    f"\"{GROUNDING_FALLBACK}\", set \"confidence\" to 0.0, and leave key_points empty. "
+    "Do NOT guess or fill gaps from prior knowledge.\n\n"
     "FORMATTING RULES (must follow):\n"
     "- Use Markdown: '##' headings to break the answer into 2-4 sections when the question warrants it.\n"
     "- Use bullet lists for enumerations (3+ items).\n"
@@ -160,7 +170,9 @@ def _extract_json(s: str) -> dict | None:
         return None
 
 
-def _build_context(retrieved, query: str, *, full_page_mode: bool = False) -> tuple[str, list[Citation]]:
+def _build_context(
+    retrieved, query: str, *, full_page_mode: bool = False, xml_grounding: bool = False
+) -> tuple[str, list[Citation]]:
     """Assemble the LLM context from retrieved pages.
 
     For each page:
@@ -170,13 +182,16 @@ def _build_context(retrieved, query: str, *, full_page_mode: bool = False) -> tu
         of each kind to the citation AND include the table markdown in the LLM's
         context so it can cite specific rows.
 
+    When `xml_grounding` is set, each block is isolated in a `<source id title>` XML
+    tag so the synthesis prompt can instruct the model to use only bounded content.
+
     Returns (context_string, citations).
     """
     blocks = []
     cits: list[Citation] = []
     snippet_budget = 6000 if full_page_mode else 1500
     citation_snippet_budget = 500 if full_page_mode else 300
-    for r in retrieved:
+    for idx, r in enumerate(retrieved, start=1):
         meta = r.meta or {}
         title = meta.get("title") or r.page_id
         full_body = r.text or ""
@@ -208,7 +223,11 @@ def _build_context(retrieved, query: str, *, full_page_mode: bool = False) -> tu
                 ctx_parts.append(f"\n[IMAGE from {title}] {e.content}")
             elif e.kind == "code":
                 ctx_parts.append(f"\n[CODE from {title}]\n{e.content}")
-        blocks.append("\n".join(ctx_parts))
+        block = "\n".join(ctx_parts)
+        if xml_grounding:
+            safe_title = str(title).replace('"', "'")
+            block = f'<source id="{idx}" title="{safe_title}">\n{block}\n</source>'
+        blocks.append(block)
 
         cits.append(
             Citation(
@@ -344,6 +363,7 @@ class QueryEngine:
             use_mmr=use_mmr,
             use_chunk_context=getattr(self.s, "query_chunk_context", True),
             synth_downweight=getattr(self.s, "retrieval_synth_downweight", 0.85),
+            rrf_k=getattr(self.s, "rrf_k", 60),
         )
 
     # ── Semantic answer cache ──
@@ -655,7 +675,8 @@ class QueryEngine:
                             page_objs[r.page_id] = r
 
                 # RRF-fuse the multiple ranked lists, then re-attach scores.
-                fused_ids = rrf_fuse_pages(ranked_lists)[:top_k] if len(ranked_lists) > 1 else ranked_lists[0][:top_k]
+                _rrf_k = getattr(self.s, "rrf_k", 60)
+                fused_ids = rrf_fuse_pages(ranked_lists, k=_rrf_k)[:top_k] if len(ranked_lists) > 1 else ranked_lists[0][:top_k]
                 for pid in fused_ids:
                     obj = page_objs.get(pid)
                     if obj is None:
@@ -711,7 +732,10 @@ class QueryEngine:
         retrieved_ctx = retrieved
         if getattr(self.s, "query_litm_reorder", True) and len(retrieved) > 3:
             retrieved_ctx = _litm_reorder(retrieved)
-        ctx, cits = _build_context(retrieved_ctx, query=question, full_page_mode=full_page_mode)
+        ctx, cits = _build_context(
+            retrieved_ctx, query=question, full_page_mode=full_page_mode,
+            xml_grounding=getattr(self.s, "query_xml_grounding", True),
+        )
 
         # GraphRAG: Compile structured "Canonical Truth" table of active bi-temporal facts
         active_facts = []

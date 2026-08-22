@@ -60,6 +60,7 @@ async def hybrid_search(
     top_k_dense: int = 20,
     top_k_rrf: int = 40,
     top_k_rerank: int = 5,
+    rrf_k: int = 60,
     graph_expand: bool = True,
     graph_hops: int = 2,
     graph_expand_cap: int = 10,
@@ -74,6 +75,8 @@ async def hybrid_search(
     - `bm25` and `dense` must expose `async search(query, k) -> list[str]` (page_ids).
     - `page_store` exposes `get_text(page_id) -> str` and `get_meta(page_id) -> dict`.
     - `graph` (optional) exposes `neighbors_of_pages(page_ids, hops) -> list[str]`.
+    - `rrf_k`: RRF smoothing constant — low (~10) favours precision (top-ranked docs),
+      high (~60) favours recall/consensus across the fused lists.
     - `hyde_text` (optional): hypothetical answer text; embedded and used for the dense leg.
     - `use_mmr`: final MMR diversification over the reranked+expanded set.
     - `use_chunk_context`: small-to-big — rerank/return the matched sub-chunks (plus
@@ -107,7 +110,7 @@ async def hybrid_search(
 
     chunk_hits = matched_chunk_indices(list(bm25_ids) + list(dense_ids)) if use_chunk_context else {}
 
-    fused = _rrf_fuse([parent_bm25, parent_dense])[:top_k_rrf]
+    fused = _rrf_fuse([parent_bm25, parent_dense], k=rrf_k)[:top_k_rrf]
     if not fused:
         return []
 

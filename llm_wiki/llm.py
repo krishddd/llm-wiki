@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import contextlib
 import logging
+import math
 import re
 from pathlib import Path
 
@@ -16,6 +17,20 @@ import httpx
 from .config import Settings, get_settings
 
 log = logging.getLogger(__name__)
+
+
+def truncate_mrl(vec: list[float], dims: int) -> list[float]:
+    """Matryoshka truncation: keep the leading `dims` dimensions and L2-renormalize.
+
+    MRL-trained embedders concentrate semantics in the leading dimensions, so a
+    truncated + renormalized prefix stays a valid unit vector in a lower-dimensional
+    space with near-identical relative distances. No-op when `dims<=0`, the vector is
+    empty, or it is already at/under `dims` (never pads)."""
+    if dims <= 0 or not vec or len(vec) <= dims:
+        return vec
+    head = vec[:dims]
+    norm = math.sqrt(sum(x * x for x in head)) or 1.0
+    return [x / norm for x in head]
 
 # Reasoning models (VibeThinker, qwen-thinking, DeepSeek-R1, …) emit an explicit
 # chain-of-thought before the final answer. Strip it so downstream JSON parsing /
@@ -203,8 +218,12 @@ class OllamaClient:
         from .providers import embed_one, resolve_embed_provider
         embed_spec = resolve_embed_provider(self.settings) if model is None else None
         embed_model = model or (embed_spec.model if embed_spec else self.settings.model_embed)
-        # Cache key = (model, text) — bounded FIFO eviction.
-        key = f"{embed_model}::{text}"
+        # Matryoshka truncation applies only to the DEFAULT embedder (model is None):
+        # a `model` override means a specific non-MRL embedder (e.g. bge-m3 STEM index).
+        mrl_dims = int(getattr(self.settings, "embed_mrl_dims", 0) or 0) if model is None else 0
+        # Cache key = (model, dims, text) — dims included so a change in embed_mrl_dims
+        # never returns a stale full-width vector. Bounded FIFO eviction.
+        key = f"{embed_model}:{mrl_dims}::{text}"
         cached = self._embed_cache.get(key)
         if cached is not None:
             return cached
@@ -220,6 +239,8 @@ class OllamaClient:
                 vec = list(r.json().get("embedding") or [])
         except httpx.HTTPError as e:
             raise OllamaError(f"embed failed: {e}") from e
+        if vec and mrl_dims:
+            vec = truncate_mrl(vec, mrl_dims)
         if vec:
             if len(self._embed_cache) >= self._EMBED_CACHE_MAX:
                 # Evict oldest insertion.
