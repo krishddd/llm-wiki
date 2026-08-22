@@ -88,6 +88,8 @@ Five techniques layered onto the existing pipeline (each flag-gated, on by defau
 | **NLI-lite claim verification** — one batched summary-role call judges each cited claim against its cited snippet; unsupported ×0.35 confidence | `synth/verify.py` | `QUERY_CLAIM_VERIFY` |
 | **Machine-page down-weight** — synthesis/promoted/crystallized pages score ×0.85 at rerank so save-backs never outrank primary sources (anti-feedback-loop) | `hybrid.py` | `RETRIEVAL_SYNTH_DOWNWEIGHT` |
 | **RAPTOR-lite topics** (Sarthi et al. 2024 / GraphRAG communities) — weekly greedy-cosine clustering of live pages → `topic-*.md` overview pages (kind `topic`) answering corpus-level questions | `wiki/topics.py` | `JOB_BUILD_TOPICS_ENABLED`, `TOPICS_MIN_CLUSTER`, `TOPICS_MAX`, `TOPICS_SIM_THRESHOLD` |
+| **Matryoshka (MRL) truncation** (Kusupati et al. 2022) — the default embedder's output is truncated to the leading N dims + L2-renormalized at BOTH index and query time; MRL models pack semantics into leading dims, so cosine distances survive. STEM/`model`-override embedders (bge-m3, non-MRL) are skipped. **Changing the dim requires a re-embed** — stored and query vectors must share one dimensionality | `llm.py::truncate_mrl` | `EMBED_MRL_DIMS` (default 256; 0 = full-width) |
+| **RRF `k` dial** (Cormack et al. 2009) — smoothing constant for BM25+dense (and multi-query) rank fusion: low k (~10) = precision, high k (~60) = recall/consensus | `hybrid.py::_rrf_fuse`, `query.py` | `RRF_K` (default 60) |
 
 Supporting tooling:
 - `scripts/backfill_v5.py` — one-off `#hq` + topic backfill for pre-v5 pages

@@ -120,6 +120,101 @@ async def test_hybrid_downweights_machine_pages(monkeypatch):
     assert result[0].score > result[1].score
 
 
+# ───── RRF k dial ─────
+
+
+def test_rrf_fuse_k_is_a_precision_recall_dial():
+    from llm_wiki.search.hybrid import _rrf_fuse
+
+    # "spike" ranks #1 in one list, absent in the other; "consensus" ranks deep (#10)
+    # in BOTH lists. Filler pads the lists so consensus sits at index 9.
+    fill_a = [f"a{i}" for i in range(9)]
+    fill_b = [f"b{i}" for i in range(9)]
+    lists = [["spike"] + fill_a + ["consensus"], fill_b + ["consensus"]]
+
+    low = dict(_rrf_fuse(lists, k=1))     # precision dial — steep rank penalty
+    high = dict(_rrf_fuse(lists, k=60))   # recall/consensus dial — flat penalty
+
+    # Low k rewards the single #1 spike over the doc both agree on mid-list.
+    assert low["spike"] > low["consensus"]
+    # High k lets cross-list consensus overtake the one-list spike.
+    assert high["consensus"] > high["spike"]
+
+
+@pytest.mark.asyncio
+async def test_hybrid_threads_rrf_k(monkeypatch):
+    seen = {}
+
+    def spy_fuse(rank_lists, k=60):
+        seen["k"] = k
+        return [(rank_lists[0][0], 1.0)] if rank_lists and rank_lists[0] else []
+    monkeypatch.setattr(hybrid_module, "_rrf_fuse", spy_fuse)
+    monkeypatch.setattr(hybrid_module, "rerank", lambda q, c, k=5: [(x, 1.0) for x in c[:k]])
+
+    bm25 = StubChunkIndex(["a"])
+    dense = StubChunkIndex(["a"])
+    ps = StubStore({"a": "body"}, metas={"a": {"title": "a", "kind": "source"}})
+    await hybrid_search(
+        "q", bm25=bm25, dense=dense, page_store=ps,
+        top_k_rerank=1, graph_expand=False, use_mmr=False, rrf_k=11,
+    )
+    assert seen["k"] == 11
+
+
+# ───── Matryoshka (MRL) truncation ─────
+
+
+def test_truncate_mrl_shrinks_and_renormalizes():
+    from llm_wiki.llm import truncate_mrl
+
+    vec = [3.0, 4.0, 100.0, -50.0]      # leading dims carry the "important" semantics
+    out = truncate_mrl(vec, 2)
+    assert len(out) == 2
+    # 3-4 right triangle → unit vector 0.6, 0.8 after L2 renormalization
+    assert out == pytest.approx([0.6, 0.8])
+
+
+def test_truncate_mrl_is_a_noop_when_disabled_or_shorter():
+    from llm_wiki.llm import truncate_mrl
+
+    assert truncate_mrl([1.0, 2.0, 3.0], 0) == [1.0, 2.0, 3.0]      # disabled
+    assert truncate_mrl([1.0, 2.0], 5) == [1.0, 2.0]                 # never pads
+    assert truncate_mrl([], 4) == []                                 # empty
+
+
+# ───── strict grounding (XML isolation + negative constraint) ─────
+
+
+def test_build_context_wraps_sources_in_xml_when_enabled():
+    from llm_wiki.query import _build_context
+
+    class _R:
+        def __init__(self, pid, text, meta):
+            self.page_id, self.text, self.meta = pid, text, meta
+
+    retrieved = [
+        _R("sources/a.md", "alpha body", {"title": 'A "quoted" page'}),
+        _R("sources/b.md", "beta body", {"title": "B"}),
+    ]
+    ctx, cits = _build_context(retrieved, query="q", xml_grounding=True)
+    assert '<source id="1" title="A \'quoted\' page">' in ctx  # quotes sanitized
+    assert '<source id="2" title="B">' in ctx
+    assert ctx.count("</source>") == 2
+    assert "alpha body" in ctx and "beta body" in ctx
+
+    # Off by default → no XML wrapper, existing behaviour preserved.
+    plain, _ = _build_context(retrieved, query="q")
+    assert "<source" not in plain
+
+
+def test_grounding_fallback_is_wired_into_synth_prompt():
+    from llm_wiki.query import GROUNDING_FALLBACK, SYNTH_SYSTEM
+
+    assert GROUNDING_FALLBACK == "I cannot answer this based on the provided context."
+    assert GROUNDING_FALLBACK in SYNTH_SYSTEM
+    assert "<source" in SYNTH_SYSTEM
+
+
 # ───── lost-in-the-middle reorder ─────
 
 
