@@ -313,3 +313,66 @@ async def test_nvidia_embed_one_sends_input_type_in_body() -> None:
     assert captured["input"] == "docker notes"
     assert captured["input_type"] == "query"
     assert captured["truncate"] == "END"
+
+
+# ── Transient-error retry (_post_with_retry) ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_retries_transient_5xx(monkeypatch) -> None:
+    # First a 504 (transient), then a 200 — chat_completion should retry and succeed.
+    import llm_wiki.providers as P
+    monkeypatch.setattr(P.asyncio, "sleep", _no_sleep)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(504, text="gateway timeout")
+        return httpx.Response(200, json={"choices": [{"message": {"content": "pong"}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        spec = ProviderSpec("nvidia", "https://x/v1", "k", "m")
+        out = await chat_completion(http, spec, "hi", None)
+    assert out == "pong"
+    assert calls["n"] == 2  # retried exactly once
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_retries_then_gives_up(monkeypatch) -> None:
+    # Persistent 503 → exhaust retries (3 attempts total) → raise_for_status raises.
+    import llm_wiki.providers as P
+    monkeypatch.setattr(P.asyncio, "sleep", _no_sleep)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(503, text="unavailable")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        spec = ProviderSpec("openrouter", "https://x/v1", "k", "m")
+        with pytest.raises(httpx.HTTPStatusError):
+            await chat_completion(http, spec, "hi", None)
+    assert calls["n"] == 3  # initial + 2 retries
+
+
+@pytest.mark.asyncio
+async def test_chat_completion_does_not_retry_4xx(monkeypatch) -> None:
+    # A 401 is not transient — surface immediately, no retries.
+    import llm_wiki.providers as P
+    monkeypatch.setattr(P.asyncio, "sleep", _no_sleep)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(401, text="unauthorized")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        spec = ProviderSpec("openai", "https://x/v1", "bad", "m")
+        with pytest.raises(httpx.HTTPStatusError):
+            await chat_completion(http, spec, "hi", None)
+    assert calls["n"] == 1  # no retry on auth error
+
+
+async def _no_sleep(_seconds: float) -> None:
+    return None
