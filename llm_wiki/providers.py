@@ -21,12 +21,60 @@ Design goals:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+# Transient HTTP statuses worth retrying: rate-limit + gateway/upstream hiccups
+# (hosted free tiers — NVIDIA, OpenRouter — 502/503/504 sporadically).
+_RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
+
+
+async def _post_with_retry(
+    http: httpx.AsyncClient,
+    url: str,
+    *,
+    json: dict,
+    headers: dict,
+    timeout: float,
+    retries: int = 2,
+    what: str = "request",
+) -> httpx.Response:
+    """POST that retries transient timeouts / 5xx / 429 with linear backoff.
+
+    Non-transient HTTP errors (4xx auth/validation) surface immediately — retrying a
+    401 or 400 is pointless. Raises the last httpx error after exhausting retries."""
+    last_err: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            r = await http.post(url, json=json, headers=headers, timeout=timeout)
+            if r.status_code in _RETRY_STATUS and attempt < retries:
+                log.warning(
+                    "provider transient status, retrying",
+                    extra={"metadata": {"what": what, "status": r.status_code,
+                                        "attempt": attempt + 1, "of": retries + 1}},
+                )
+                last_err = httpx.HTTPStatusError(
+                    f"{r.status_code} transient", request=r.request, response=r)
+                await asyncio.sleep(1.5 * (attempt + 1))
+                continue
+            return r
+        except (httpx.TimeoutException, httpx.TransportError) as e:
+            last_err = e
+            if attempt >= retries:
+                break
+            log.warning(
+                "provider network error, retrying",
+                extra={"metadata": {"what": what, "err": type(e).__name__,
+                                    "attempt": attempt + 1, "of": retries + 1}},
+            )
+            await asyncio.sleep(1.5 * (attempt + 1))
+    assert last_err is not None
+    raise last_err
 
 
 @dataclass(frozen=True)
@@ -190,9 +238,10 @@ async def chat_completion(
     payload = build_chat_payload(
         spec.model, prompt, system, temperature, force_max_tokens=spec.force_max_tokens,
     )
-    r = await http.post(
-        f"{spec.base_url}/chat/completions",
+    r = await _post_with_retry(
+        http, f"{spec.base_url}/chat/completions",
         json=payload, headers=_auth_headers(spec.api_key), timeout=timeout,
+        what=f"{spec.name} chat",
     )
     r.raise_for_status()
     data = r.json()
@@ -231,9 +280,10 @@ async def vision_completion(
     }
     if spec.force_max_tokens:
         payload["max_tokens"] = 4096
-    r = await http.post(
-        f"{spec.base_url}/chat/completions",
+    r = await _post_with_retry(
+        http, f"{spec.base_url}/chat/completions",
         json=payload, headers=_auth_headers(spec.api_key), timeout=timeout,
+        what=f"{spec.name} vision",
     )
     r.raise_for_status()
     data = r.json()
@@ -254,10 +304,10 @@ async def embed_one(
     body: dict = {"model": spec.model, "input": text}
     if spec.embed_extra:
         body.update(spec.embed_extra)
-    r = await http.post(
-        f"{spec.base_url}/embeddings",
-        json=body,
-        headers=_auth_headers(spec.api_key), timeout=timeout,
+    r = await _post_with_retry(
+        http, f"{spec.base_url}/embeddings",
+        json=body, headers=_auth_headers(spec.api_key), timeout=timeout,
+        what=f"{spec.name} embed",
     )
     r.raise_for_status()
     data = r.json()
