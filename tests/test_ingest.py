@@ -28,6 +28,9 @@ async def test_ingest_small_md(tmp_settings, fake_ollama, tmp_path):
     assert fm["kind"] == "source"
     assert fm["type"] == "Source Document"
     assert fm["resource"] == fm["source"]
+    # Provenance must be the ingested file — not a relation endpoint from extraction
+    # (FakeOllama emits a Docker→FastAPI relation). Review Autopilot re-reads it.
+    assert fm["source"] == str(src)
     assert fm["timestamp"]
     assert fm["description"]
     # Doc2Query: hypothetical questions persisted + indexed as their own unit.

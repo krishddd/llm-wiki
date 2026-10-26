@@ -740,18 +740,18 @@ class Ingestor:
                 seen.add(key)
                 entities.append(ExtractedEntity(name=e["name"], type=e.get("type", "CONCEPT")))
             for r in ex.get("relations", []) or []:
-                src = (r.get("src") or "").strip()
+                rel_src = (r.get("src") or "").strip()
                 dst = (r.get("dst") or "").strip()
                 rel_type = (r.get("rel_type") or "RELATES_TO").upper()
-                if not src or not dst:
+                if not rel_src or not dst:
                     continue
-                rkey = (src.lower(), dst.lower(), rel_type)
+                rkey = (rel_src.lower(), dst.lower(), rel_type)
                 if rkey in seen_rel:
                     continue
                 seen_rel.add(rkey)
                 relations.append(
                     ExtractedRelation(
-                        src_name=src,
+                        src_name=rel_src,
                         src_type=r.get("src_type", "CONCEPT"),
                         dst_name=dst,
                         dst_type=r.get("dst_type", "CONCEPT"),
